@@ -238,7 +238,7 @@ pytest tests/integration/
 
 ```
 portfolio-optimizer/
-├── backend/           # Python backend
+├── backend/          # Python backend
 │   ├── api/          # FastAPI routes
 │   ├── data/         # Data collection & processing
 │   ├── ml/           # ML models
@@ -251,7 +251,7 @@ portfolio-optimizer/
 │   │   └── services/
 ├── notebooks/        # Jupyter notebooks for exploration
 ├── scripts/          # Utility scripts
-├── docs/            # Documentation
+├── docs/             # Documentation
 └── docker-compose.yml
 ```
 
