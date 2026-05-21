@@ -21,23 +21,23 @@ This project demonstrates the intersection of AI/ML, Software Engineering, and F
 
 ### Current Features
 
-- [ ] Real-time data collection from multiple sources
-- [ ] FinBERT-based sentiment analysis
-- [ ] LSTM/Transformer price prediction models
-- [ ] Mean-variance portfolio optimization
-- [ ] Comprehensive backtesting engine
-- [ ] REST API with authentication
-- [ ] Interactive web dashboard
-- [ ] Risk metrics calculation (Sharpe, VaR, Drawdown)
+- Real-time data collection from multiple sources
+- FinBERT-based sentiment analysis
+- LSTM/Transformer price prediction models
+- Mean-variance portfolio optimization
+- Comprehensive backtesting engine
+- REST API with authentication
+- Interactive web dashboard
+- Risk metrics calculation (Sharpe, VaR, Drawdown)
 
 ### Planned Features
 
-- [ ] Cryptocurrency support
-- [ ] Options pricing models
-- [ ] Reinforcement learning for portfolio management
-- [ ] ESG scoring integration
-- [ ] Mobile app
-- [ ] Multi-user support with saved portfolios
+- Cryptocurrency support
+- Options pricing models
+- Reinforcement learning for portfolio management
+- ESG scoring integration
+- Mobile app
+- Multi-user support with saved portfolios
 
 ## Architecture
 
