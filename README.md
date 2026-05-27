@@ -293,7 +293,7 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 ## Acknowledgments
 
-- UT Austin for the education <3
+- UT Austin for the education :)
 - Open source community
 - Financial data providers
 
