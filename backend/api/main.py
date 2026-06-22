@@ -1,0 +1,30 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from backend.api.routes.portfolio import router as portfolio_router
+
+app = FastAPI(
+    title="Portfolio Optimizer API",
+    description="Backend API for portfolio analysis and optimization.",
+    version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(portfolio_router)
+
+
+@app.get("/")
+def root():
+    return {"message": "portfolio optimizer api is running"}
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
