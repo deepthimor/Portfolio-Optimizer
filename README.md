@@ -21,23 +21,30 @@ This project demonstrates the intersection of AI/ML, Software Engineering, and F
 
 ### Current Features
 
-- Real-time data collection from multiple sources
-- FinBERT-based sentiment analysis
-- LSTM/Transformer price prediction models
-- Mean-variance portfolio optimization
-- Comprehensive backtesting engine
-- REST API with authentication
-- Interactive web dashboard
-- Risk metrics calculation (Sharpe, VaR, Drawdown)
+- Manual holdings input for ticker, quantity, price, asset class, and sector
+- Cash input and cash percentage calculation
+- Total portfolio value calculation
+- Holding weight calculation
+- Top holdings ranking
+- Sector allocation breakdown
+- Asset class allocation breakdown
+- FastAPI backend with clean JSON responses
+- React frontend connected to the backend
+- PostgreSQL-backed portfolio storage
+- Create, read, update, and delete portfolio APIs
+- Portfolio snapshot creation after analysis
+- Basic unit tests for portfolio calculations
 
 ### Planned Features
 
-- Cryptocurrency support
-- Options pricing models
-- Reinforcement learning for portfolio management
-- ESG scoring integration
-- Mobile app
-- Multi-user support with saved portfolios
+- Dashboard charts
+- Risk metrics
+- Target allocation comparison
+- Rebalancing recommendations
+- Historical market data ingestion
+- AI-generated portfolio explanations
+- Backtesting engine
+- Deployment
 
 ## Architecture
 
@@ -234,7 +241,7 @@ pytest tests/integration/
 
 ## Project Structure
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 portfolio-optimizer/
