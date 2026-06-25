@@ -1,4 +1,4 @@
-import yfinance as yf
+import os
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -8,7 +8,10 @@ from sqlalchemy import create_engine
 import logging
 from tqdm import tqdm
 import time
-import requests
+from alpha_vantage.timeseries import TimeSeries
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,56 +20,57 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class StockDataCollector:
+class AlphaVantageCollector:
     
-    def __init__(self, database_url: str):
-        self.database_url = database_url
-        self.engine = create_engine(database_url)
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        })
-        logger.info("stock data collector initialized")
+    def __init__(self, api_key: str, database_url: str = None):
+        self.api_key = api_key
+        self.ts = TimeSeries(key=api_key, output_format='pandas')
+        
+        if database_url:
+            self.database_url = database_url
+            self.engine = create_engine(database_url)
+        else:
+            self.database_url = None
+            self.engine = None
+        
+        logger.info("alpha vantage collector initialized")
     
     def fetch_stock_data(
         self, 
-        ticker: str, 
-        start_date: str, 
-        end_date: str,
-        interval: str = "1d"
+        ticker: str,
+        outputsize: str = 'full'
     ) -> Optional[pd.DataFrame]:
         
         try:
-            logger.info(f"fetching {ticker} data from {start_date} to {end_date}")
+            logger.info(f"fetching {ticker} data from alpha vantage")
             
-            stock = yf.Ticker(ticker, session=self.session)
-            
-            df = stock.history(
-                start=start_date,
-                end=end_date,
-                interval=interval,
-                auto_adjust=False
+            data, meta_data = self.ts.get_daily_adjusted(
+                symbol=ticker,
+                outputsize=outputsize
             )
             
-            if df.empty:
+            if data.empty:
                 logger.warning(f"no data found for {ticker}")
                 return None
             
-            df = df.reset_index()
+            df = data.reset_index()
             df = df.rename(columns={
-                'Date': 'timestamp',
-                'Open': 'open',
-                'High': 'high',
-                'Low': 'low',
-                'Close': 'close',
-                'Volume': 'volume',
-                'Adj Close': 'adjusted_close'
+                'date': 'timestamp',
+                '1. open': 'open',
+                '2. high': 'high',
+                '3. low': 'low',
+                '4. close': 'close',
+                '5. adjusted close': 'adjusted_close',
+                '6. volume': 'volume'
             })
             
+            df = df[['timestamp', 'open', 'high', 'low', 'close', 'adjusted_close', 'volume']]
             df['ticker'] = ticker
+            df = df.sort_values('timestamp')
             
             logger.info(f"fetched {len(df)} rows for {ticker}")
-            time.sleep(1)
+            
+            time.sleep(12)
             
             return df
             
@@ -115,53 +119,19 @@ class StockDataCollector:
             logger.error(f"error calculating indicators: {str(e)}")
             return df
     
-    def save_to_database(self, df: pd.DataFrame, stock_id: int):
-        
-        try:
-            logger.info(f"saving {len(df)} rows to database")
-            
-            df_to_save = df[[
-                'timestamp', 'open', 'high', 'low', 'close', 'volume',
-                'adjusted_close', 'sma_20', 'sma_50', 'rsi', 'macd'
-            ]].copy()
-            
-            df_to_save['stock_id'] = stock_id
-            df_to_save['created_at'] = datetime.utcnow()
-            
-            df_to_save.to_sql(
-                'stock_prices',
-                self.engine,
-                if_exists='append',
-                index=False,
-                method='multi'
-            )
-            
-            logger.info(f"saved {len(df)} rows successfully")
-            
-        except Exception as e:
-            logger.error(f"error saving to database: {str(e)}")
-            raise
-    
     def collect_historical_data(
         self,
         tickers: List[str],
-        years: int = 5,
-        save_to_db: bool = True
+        save_to_db: bool = False
     ) -> Dict[str, pd.DataFrame]:
-        
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=years * 365)
-        
-        start_str = start_date.strftime('%Y-%m-%d')
-        end_str = end_date.strftime('%Y-%m-%d')
         
         results = {}
         
-        logger.info(f"collecting data for {len(tickers)} stocks from {start_str} to {end_str}")
+        logger.info(f"collecting data for {len(tickers)} stocks")
         
         for ticker in tqdm(tickers, desc="collecting stock data"):
             try:
-                df = self.fetch_stock_data(ticker, start_str, end_str)
+                df = self.fetch_stock_data(ticker)
                 
                 if df is None or df.empty:
                     logger.warning(f"skipping {ticker} - no data")
@@ -171,7 +141,7 @@ class StockDataCollector:
                 
                 results[ticker] = df
                 
-                if save_to_db:
+                if save_to_db and self.engine:
                     logger.info(f"saving {ticker} to database not yet implemented")
                 
             except Exception as e:
@@ -182,29 +152,17 @@ class StockDataCollector:
         return results
 
 
-def quick_fetch(ticker: str, days: int = 30) -> pd.DataFrame:
-    
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-    
-    collector = StockDataCollector(database_url="sqlite:///:memory:")
-    df = collector.fetch_stock_data(
-        ticker,
-        start_date.strftime('%Y-%m-%d'),
-        end_date.strftime('%Y-%m-%d')
-    )
-    
-    if df is not None:
-        df = collector.calculate_technical_indicators(df)
-    
-    return df
-
-
 if __name__ == "__main__":
+    api_key = os.getenv("ALPHA_VANTAGE_API_KEY")
+    
+    if not api_key:
+        logger.error("ALPHA_VANTAGE_API_KEY not found in .env file")
+        exit(1)
+    
     test_tickers = ["AAPL", "GOOGL", "MSFT"]
     
-    collector = StockDataCollector(database_url="sqlite:///:memory:")
-    results = collector.collect_historical_data(test_tickers, years=1, save_to_db=False)
+    collector = AlphaVantageCollector(api_key=api_key)
+    results = collector.collect_historical_data(test_tickers, save_to_db=False)
     
     for ticker, df in results.items():
         print(f"\n{ticker}:")
