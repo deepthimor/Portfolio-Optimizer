@@ -1,0 +1,89 @@
+{
+  "name": "Sample Portfolio",
+  "cash": 2500,
+  "target_allocation": {
+    "stock": 60,
+    "etf": 30,
+    "cash": 10
+  },
+  "holdings": [
+    {
+      "ticker": "AAPL",
+      "quantity": 20,
+      "price": 190,
+      "asset_class": "stock",
+      "sector": "technology"
+    },
+    {
+      "ticker": "MSFT",
+      "quantity": 10,
+      "price": 420,
+      "asset_class": "stock",
+      "sector": "technology"
+    },
+    {
+      "ticker": "NVDA",
+      "quantity": 8,
+      "price": 950,
+      "asset_class": "stock",
+      "sector": "technology"
+    },
+    {
+      "ticker": "JPM",
+      "quantity": 12,
+      "price": 200,
+      "asset_class": "stock",
+      "sector": "financials"
+    },
+    {
+      "ticker": "JNJ",
+      "quantity": 15,
+      "price": 150,
+      "asset_class": "stock",
+      "sector": "healthcare"
+    },
+    {
+      "ticker": "VTI",
+      "quantity": 18,
+      "price": 260,
+      "asset_class": "etf",
+      "sector": "broad market"
+    },
+    {
+      "ticker": "BND",
+      "quantity": 20,
+      "price": 72,
+      "asset_class": "etf",
+      "sector": "bonds"
+    },
+    {
+      "ticker": "CASH",
+      "quantity": 2500,
+      "price": 1,
+      "asset_class": "cash",
+      "sector": "cash"
+    }
+  ],
+  "invalid_samples": [
+    {
+      "reason": "missing ticker",
+      "holding": {
+        "ticker": "",
+        "quantity": 5,
+        "price": 100,
+        "asset_class": "stock",
+        "sector": "technology"
+      }
+    },
+    {
+      "reason": "negative price",
+      "holding": {
+        "ticker": "TSLA",
+        "quantity": 3,
+        "price": -200,
+        "asset_class": "stock",
+        "sector": "consumer cyclical"
+      }
+    }
+  ]
+}
