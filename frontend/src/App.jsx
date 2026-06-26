@@ -10,11 +10,54 @@ const emptyHolding = {
   sector: "",
 };
 
+const samplePortfolio = {
+  cash: 2500,
+  holdings: [
+    {
+      ticker: "AAPL",
+      quantity: 20,
+      price: 190,
+      asset_class: "stock",
+      sector: "technology",
+    },
+    {
+      ticker: "MSFT",
+      quantity: 10,
+      price: 420,
+      asset_class: "stock",
+      sector: "technology",
+    },
+    {
+      ticker: "NVDA",
+      quantity: 8,
+      price: 950,
+      asset_class: "stock",
+      sector: "technology",
+    },
+    {
+      ticker: "JPM",
+      quantity: 12,
+      price: 200,
+      asset_class: "stock",
+      sector: "financials",
+    },
+    {
+      ticker: "VTI",
+      quantity: 18,
+      price: 260,
+      asset_class: "etf",
+      sector: "broad market",
+    },
+  ],
+};
+
 function App() {
   const [cash, setCash] = useState(0);
   const [holdings, setHoldings] = useState([{ ...emptyHolding }]);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   function updateHolding(index, field, value) {
     const nextHoldings = [...holdings];
@@ -37,10 +80,28 @@ function App() {
     setHoldings(holdings.filter((_, currentIndex) => currentIndex !== index));
   }
 
+  function loadSamplePortfolio() {
+    setCash(samplePortfolio.cash);
+    setHoldings(samplePortfolio.holdings);
+    setResult(null);
+    setError("");
+    setSuccess("Sample portfolio loaded.");
+  }
+
+  function clearPortfolio() {
+    setCash(0);
+    setHoldings([{ ...emptyHolding }]);
+    setResult(null);
+    setError("");
+    setSuccess("");
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
+    setSuccess("");
     setResult(null);
+    setIsLoading(true);
 
     const payload = {
       cash: Number(cash),
@@ -56,15 +117,21 @@ function App() {
     try {
       const data = await analyzePortfolio(payload);
       setResult(data);
+      setSuccess("Portfolio analyzed successfully.");
     } catch (err) {
       setError(err.response?.data?.detail || "failed to analyze portfolio");
+    } finally {
+      setIsLoading(false);
     }
   }
 
   return (
     <main>
       <h1>Portfolio Optimizer</h1>
-      <p>Enter holdings to calculate portfolio value, weights, cash percentage, and allocation breakdowns.</p>
+      <p>
+        Enter holdings to calculate portfolio value, weights, cash percentage,
+        and allocation breakdowns.
+      </p>
 
       <form onSubmit={handleSubmit}>
         <label>
@@ -83,7 +150,9 @@ function App() {
             <input
               placeholder="ticker"
               value={holding.ticker}
-              onChange={(event) => updateHolding(index, "ticker", event.target.value)}
+              onChange={(event) =>
+                updateHolding(index, "ticker", event.target.value)
+              }
             />
             <input
               placeholder="quantity"
@@ -91,7 +160,9 @@ function App() {
               min="0"
               step="0.01"
               value={holding.quantity}
-              onChange={(event) => updateHolding(index, "quantity", event.target.value)}
+              onChange={(event) =>
+                updateHolding(index, "quantity", event.target.value)
+              }
             />
             <input
               placeholder="price"
@@ -99,30 +170,46 @@ function App() {
               min="0"
               step="0.01"
               value={holding.price}
-              onChange={(event) => updateHolding(index, "price", event.target.value)}
+              onChange={(event) =>
+                updateHolding(index, "price", event.target.value)
+              }
             />
             <input
               placeholder="asset class"
               value={holding.asset_class}
-              onChange={(event) => updateHolding(index, "asset_class", event.target.value)}
+              onChange={(event) =>
+                updateHolding(index, "asset_class", event.target.value)
+              }
             />
             <input
               placeholder="sector"
               value={holding.sector}
-              onChange={(event) => updateHolding(index, "sector", event.target.value)}
+              onChange={(event) =>
+                updateHolding(index, "sector", event.target.value)
+              }
             />
             <button type="button" onClick={() => removeHolding(index)}>
-              remove
+              Remove Holding
             </button>
           </section>
         ))}
 
         <button type="button" onClick={addHolding}>
-          add holding
+          Add Holding
         </button>
-        <button type="submit">analyze portfolio</button>
+        <button type="button" onClick={loadSamplePortfolio}>
+          Load Sample Portfolio
+        </button>
+        <button type="button" onClick={clearPortfolio}>
+          Clear
+        </button>
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? "Analyzing..." : "Analyze Portfolio"}
+        </button>
       </form>
 
+      {isLoading && <p>Analyzing portfolio...</p>}
+      {success && <p>{success}</p>}
       {error && <p>{error}</p>}
 
       {result && (
@@ -167,10 +254,24 @@ function App() {
           </ul>
 
           <h3>Sector Breakdown</h3>
-          <pre>{JSON.stringify(result.sector_breakdown, null, 2)}</pre>
+          <ul>
+            {Object.entries(result.sector_breakdown).map(([sector, weight]) => (
+              <li key={sector}>
+                {sector}: {weight}%
+              </li>
+            ))}
+          </ul>
 
           <h3>Asset Class Breakdown</h3>
-          <pre>{JSON.stringify(result.asset_class_breakdown, null, 2)}</pre>
+          <ul>
+            {Object.entries(result.asset_class_breakdown).map(
+              ([assetClass, weight]) => (
+                <li key={assetClass}>
+                  {assetClass}: {weight}%
+                </li>
+              )
+            )}
+          </ul>
         </section>
       )}
     </main>
