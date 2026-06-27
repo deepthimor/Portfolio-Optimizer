@@ -223,3 +223,19 @@ def test_analyze_portfolio_rejects_missing_sector():
 def test_analyze_portfolio_rejects_empty_portfolio():
     with pytest.raises(ValidationError):
         PortfolioAnalyzeRequest(cash=1000, holdings=[])
+
+
+def test_analyze_portfolio_rejects_negative_quantity():
+    with pytest.raises(ValidationError):
+        PortfolioAnalyzeRequest(
+            cash=0,
+            holdings=[
+                {
+                    "ticker": "AAPL",
+                    "quantity": -1,
+                    "price": 100,
+                    "asset_class": "stock",
+                    "sector": "technology",
+                }
+            ],
+        )
