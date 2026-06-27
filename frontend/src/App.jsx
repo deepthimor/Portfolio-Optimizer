@@ -209,8 +209,8 @@ function App() {
       </form>
 
       {isLoading && <p>Analyzing portfolio...</p>}
-      {success && <p>{success}</p>}
-      {error && <p>{error}</p>}
+      {success && <p className="success">{success}</p>}
+      {error && <p className="error">{error}</p>}
 
       {result && (
         <section>
