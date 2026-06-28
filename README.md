@@ -21,6 +21,12 @@ The current MVP focuses on deterministic portfolio calculations. Users enter hol
 
 The project is intentionally structured so future AI features can explain the calculated metrics, while the backend remains responsible for the actual financial calculations.
 
+## Demo Screenshot
+
+The current MVP lets users manually enter holdings, submit the portfolio to the FastAPI backend, and view calculated portfolio metrics in the React frontend.
+
+![Portfolio Optimizer local app screenshot](docs/screenshots/portfolio-summary.png)
+
 ## Current Features
 
 * Manual holdings input for ticker, quantity, price, asset class, and sector
@@ -229,6 +235,11 @@ Frontend URL:
 ```text
 http://localhost:5173
 ```
+
+If port `5173` is already in use, run:
+
+```bash
+npm run dev -- --port 5175
 
 ## API Documentation
 

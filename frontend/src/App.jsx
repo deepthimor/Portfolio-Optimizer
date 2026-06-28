@@ -54,7 +54,7 @@ const samplePortfolio = {
 function App() {
   const [cash, setCash] = useState(0);
   const [holdings, setHoldings] = useState([{ ...emptyHolding }]);
-  const [result, setResult] = useState(null);
+  const [portfolioAnalysis, setPortfolioAnalysis] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -83,7 +83,7 @@ function App() {
   function loadSamplePortfolio() {
     setCash(samplePortfolio.cash);
     setHoldings(samplePortfolio.holdings);
-    setResult(null);
+    setPortfolioAnalysis(null);
     setError("");
     setSuccess("Sample portfolio loaded.");
   }
@@ -91,7 +91,7 @@ function App() {
   function clearPortfolio() {
     setCash(0);
     setHoldings([{ ...emptyHolding }]);
-    setResult(null);
+    setPortfolioAnalysis(null);
     setError("");
     setSuccess("");
   }
@@ -100,7 +100,7 @@ function App() {
     event.preventDefault();
     setError("");
     setSuccess("");
-    setResult(null);
+    setPortfolioAnalysis(null);
     setIsLoading(true);
 
     const payload = {
@@ -115,8 +115,8 @@ function App() {
     };
 
     try {
-      const data = await analyzePortfolio(payload);
-      setResult(data);
+      const analysisResponse = await analyzePortfolio(payload);
+      setPortfolioAnalysis(analysisResponse);
       setSuccess("Portfolio analyzed successfully.");
     } catch (err) {
       setError(err.response?.data?.detail || "failed to analyze portfolio");
@@ -212,13 +212,13 @@ function App() {
       {success && <p className="success">{success}</p>}
       {error && <p className="error">{error}</p>}
 
-      {result && (
+      {portfolioAnalysis && (
         <section>
           <h2>Portfolio Summary</h2>
-          <p>Total Portfolio Value: ${result.total_portfolio_value}</p>
-          <p>Total Holdings Value: ${result.total_holdings_value}</p>
-          <p>Cash: ${result.cash}</p>
-          <p>Cash Percentage: {result.cash_percentage}%</p>
+          <p>Total Portfolio Value: ${portfolioAnalysis.total_portfolio_value}</p>
+          <p>Total Holdings Value: ${portfolioAnalysis.total_holdings_value}</p>
+          <p>Cash: ${portfolioAnalysis.cash}</p>
+          <p>Cash Percentage: {portfolioAnalysis.cash_percentage}%</p>
 
           <h3>Holdings</h3>
           <table>
@@ -232,7 +232,7 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {result.holdings.map((holding) => (
+              {portfolioAnalysis.holdings.map((holding) => (
                 <tr key={holding.ticker}>
                   <td>{holding.ticker}</td>
                   <td>${holding.market_value}</td>
@@ -246,7 +246,7 @@ function App() {
 
           <h3>Top Holdings</h3>
           <ul>
-            {result.top_holdings.map((holding) => (
+            {portfolioAnalysis.top_holdings.map((holding) => (
               <li key={holding.ticker}>
                 {holding.ticker}: ${holding.market_value} ({holding.weight}%)
               </li>
@@ -255,7 +255,7 @@ function App() {
 
           <h3>Sector Breakdown</h3>
           <ul>
-            {Object.entries(result.sector_breakdown).map(([sector, weight]) => (
+            {Object.entries(portfolioAnalysis.sector_breakdown).map(([sector, weight]) => (
               <li key={sector}>
                 {sector}: {weight}%
               </li>
@@ -264,7 +264,7 @@ function App() {
 
           <h3>Asset Class Breakdown</h3>
           <ul>
-            {Object.entries(result.asset_class_breakdown).map(
+            {Object.entries(portfolioAnalysis.asset_class_breakdown).map(
               ([assetClass, weight]) => (
                 <li key={assetClass}>
                   {assetClass}: {weight}%
