@@ -148,7 +148,12 @@ portfolio-optimizer/
 ├── tests/
 │   └── test_portfolio_analysis.py
 ├── docs/
+│   ├── api-examples.md
+│   ├── edge-cases.md
+│   ├── product-spec.md
+│   └── screenshots/
 ├── sample_data/
+│   └── sample_portfolio.json
 ├── docker-compose.yml
 ├── requirements.txt
 └── README.md
@@ -240,6 +245,13 @@ If port `5173` is already in use, run:
 
 ```bash
 npm run dev -- --port 5175
+```
+
+Then open:
+
+```text
+http://localhost:5175
+```
 
 ## API Documentation
 
@@ -339,18 +351,26 @@ DELETE /api/portfolio/{portfolio_id}
 POST /api/portfolio/{portfolio_id}/snapshot
 ```
 
+## Documentation
+
+Additional project documentation is available in the `docs/` folder:
+
+* `docs/product-spec.md` describes the product scope and current MVP.
+* `docs/api-examples.md` provides API examples.
+* `docs/edge-cases.md` explains validation, duplicate ticker behavior, cash handling, rounding, and tested portfolio scenarios.
+
 ## Testing
 
 Run all tests from the project root:
 
 ```bash
-pytest
+PYTHONPATH=. pytest
 ```
 
 Run the portfolio analysis tests:
 
 ```bash
-pytest tests/test_portfolio_analysis.py
+PYTHONPATH=. pytest tests/test_portfolio_analysis.py
 ```
 
 ## Current Limitations
