@@ -25,7 +25,7 @@ The project is intentionally structured so future AI features can explain the ca
 
 The current MVP lets users manually enter holdings, submit the portfolio to the FastAPI backend, and view calculated portfolio metrics in the React frontend.
 
-![Portfolio Optimizer local app screenshot](docs/screenshots/portfolio-summary.png)
+![Portfolio Optimizer local app screenshot](docs/screenshots/portfolio-summary-demo.png)
 
 ## Current Features
 
