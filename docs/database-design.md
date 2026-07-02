@@ -194,3 +194,10 @@ For local development, database tables can be created with:
 
 ```bash
 python scripts/create_tables.py
+```
+
+This script calls SQLAlchemy's Base.metadata.create_all().
+
+create_all() is intended only for local MVP development and initial testing. It does not provide versioned schema migrations and should not be used as the production migration strategy.
+
+A future production version should use a migration tool such as Alembic.
