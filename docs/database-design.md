@@ -187,3 +187,10 @@ The database is designed around three main ideas:
 3. Snapshots are separate child records because calculated results can be saved over time.
 
 This keeps the schema normalized, flexible, and aligned with the current Portfolio Optimizer MVP.
+
+## Development Table Creation
+
+For local development, database tables can be created with:
+
+```bash
+python scripts/create_tables.py

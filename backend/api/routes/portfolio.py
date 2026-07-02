@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import HoldingRecord, PortfolioRecord, PortfolioSnapshot
 from backend.schemas.portfolio import (
+    HoldingInput,
+    HoldingRecordResponse,
     PortfolioAnalyzeRequest,
     PortfolioAnalyzeResponse,
     PortfolioCreateRequest,
@@ -44,6 +46,41 @@ def create_portfolio(request: PortfolioCreateRequest, db: Session = Depends(get_
     db.commit()
     db.refresh(portfolio)
     return portfolio
+
+
+@router.post(
+    "/{portfolio_id}/holdings",
+    response_model=HoldingRecordResponse,
+    status_code=201,
+)
+def create_holding(
+    portfolio_id: int,
+    request: HoldingInput,
+    db: Session = Depends(get_db),
+):
+    portfolio = (
+        db.query(PortfolioRecord)
+        .filter(PortfolioRecord.id == portfolio_id)
+        .first()
+    )
+
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="portfolio not found")
+
+    holding = HoldingRecord(
+        portfolio_id=portfolio.id,
+        ticker=request.ticker.upper().strip(),
+        quantity=request.quantity,
+        price=request.price,
+        asset_class=request.asset_class.lower().strip(),
+        sector=request.sector.lower().strip(),
+    )
+
+    db.add(holding)
+    db.commit()
+    db.refresh(holding)
+
+    return holding
 
 
 @router.get("", response_model=list[PortfolioRecordResponse])

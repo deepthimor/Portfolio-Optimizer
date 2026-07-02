@@ -60,3 +60,16 @@ class PortfolioRecordResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class HoldingRecordResponse(BaseModel):
+    id: int
+    portfolio_id: int
+    ticker: str
+    quantity: float
+    price: float
+    asset_class: str
+    sector: str
+
+    class Config:
+        from_attributes = True
