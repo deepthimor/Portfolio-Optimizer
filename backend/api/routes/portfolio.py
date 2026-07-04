@@ -6,6 +6,7 @@ from backend.models import HoldingRecord, PortfolioRecord, PortfolioSnapshot
 from backend.schemas.portfolio import (
     HoldingInput,
     HoldingRecordResponse,
+    HoldingUpdateRequest,
     PortfolioAnalyzeRequest,
     PortfolioAnalyzeResponse,
     PortfolioCreateRequest,
@@ -147,6 +148,64 @@ def delete_portfolio(portfolio_id: int, db: Session = Depends(get_db)):
 
     return {"message": "portfolio deleted"}
 
+
+@router.patch(
+    "/holdings/{holding_id}",
+    response_model=HoldingRecordResponse,
+)
+def update_holding(
+    holding_id: int,
+    request: HoldingUpdateRequest,
+    db: Session = Depends(get_db),
+):
+    holding = (
+        db.query(HoldingRecord)
+        .filter(HoldingRecord.id == holding_id)
+        .first()
+    )
+
+    if not holding:
+        raise HTTPException(status_code=404, detail="holding not found")
+
+    if request.ticker is not None:
+        holding.ticker = request.ticker.upper().strip()
+
+    if request.quantity is not None:
+        holding.quantity = request.quantity
+
+    if request.price is not None:
+        holding.price = request.price
+
+    if request.asset_class is not None:
+        holding.asset_class = request.asset_class.lower().strip()
+
+    if request.sector is not None:
+        holding.sector = request.sector.lower().strip()
+
+    db.commit()
+    db.refresh(holding)
+
+    return holding
+
+
+@router.delete("/holdings/{holding_id}")
+def delete_holding(
+    holding_id: int,
+    db: Session = Depends(get_db),
+):
+    holding = (
+        db.query(HoldingRecord)
+        .filter(HoldingRecord.id == holding_id)
+        .first()
+    )
+
+    if not holding:
+        raise HTTPException(status_code=404, detail="holding not found")
+
+    db.delete(holding)
+    db.commit()
+
+    return {"message": "holding deleted"}
 
 @router.post("/{portfolio_id}/snapshot")
 def create_snapshot(portfolio_id: int, db: Session = Depends(get_db)):

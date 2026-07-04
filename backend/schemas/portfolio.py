@@ -52,6 +52,13 @@ class PortfolioUpdateRequest(BaseModel):
     name: Optional[str] = None
     cash: Optional[float] = Field(default=None, ge=0)
 
+class HoldingUpdateRequest(BaseModel):
+    ticker: Optional[str] = Field(default=None, min_length=1)
+    quantity: Optional[float] = Field(default=None, gt=0)
+    price: Optional[float] = Field(default=None, gt=0)
+    asset_class: Optional[str] = Field(default=None, min_length=1)
+    sector: Optional[str] = Field(default=None, min_length=1)
+
 
 class PortfolioRecordResponse(BaseModel):
     id: int
