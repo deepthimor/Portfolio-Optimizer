@@ -215,3 +215,41 @@ li {
     overflow-x: auto;
   }
 }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.section-header h2 {
+  margin: 0;
+}
+
+.saved-portfolio-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.saved-portfolio-button {
+  width: 100%;
+  text-align: left;
+  background: #111827;
+  border: 1px solid #4b5563;
+}
+
+.portfolio-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.danger-button {
+  background: #991b1b;
+}
+
+.danger-button:hover {
+  background: #b91c1c;
+}
