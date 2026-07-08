@@ -537,6 +537,51 @@ Status: `404`
 
 Creates a saved calculated snapshot for an existing portfolio.
 
+---
+
+## GET /api/portfolio/{portfolio_id}/snapshots
+
+Lists saved analysis snapshots for an existing portfolio.
+
+### Request
+
+Path parameter:
+
+```text
+portfolio_id: integer
+```
+
+No request body.
+
+### Success Response
+
+Status: `200`
+
+```json
+[
+  {
+    "id": 1,
+    "portfolio_id": 1,
+    "total_portfolio_value": 5775,
+    "total_holdings_value": 3275,
+    "cash_percentage": 43.29,
+    "created_at": "2026-07-08T00:00:00"
+  }
+]
+```
+
+### Error Responses
+
+Portfolio not found:
+
+Status: `404`
+
+```json
+{
+  "detail": "portfolio not found"
+}
+```
+
 ### Request
 
 Path parameter:

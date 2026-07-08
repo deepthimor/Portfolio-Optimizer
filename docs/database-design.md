@@ -2,113 +2,56 @@
 
 ## Purpose
 
-This document explains the database schema currently used by the Portfolio Optimizer MVP.
+The Portfolio Optimizer MVP stores user-created portfolios, their holdings, and calculated analysis snapshots.
 
-The MVP stores manually created portfolios, the holdings inside each portfolio, and calculated portfolio snapshots. The goal is to keep the schema simple, normalized, and aligned with the current backend implementation.
+The database supports the Week 2 saved portfolio workflow:
 
-Authentication and user accounts are not part of the current MVP. A future `users` table is documented separately as a planned extension.
+- Create saved portfolios
+- Read saved portfolios
+- Update saved portfolio metadata
+- Delete saved portfolios
+- Add, update, and delete saved holdings
+- Save portfolio analysis snapshots
 
-## Current MVP Tables
+## Database Tables
 
-The current MVP uses three tables:
+### portfolio_records
 
-1. `portfolio_records`
-2. `holding_records`
-3. `portfolio_snapshots`
-
-These tables support saved portfolios, portfolio holdings, and saved calculation snapshots.
-
-## Table: portfolio_records
-
-The `portfolio_records` table stores one row per saved portfolio.
+Stores one saved portfolio.
 
 | Column | Type | Purpose |
 |---|---|---|
-| `id` | Integer | Primary key for the portfolio |
-| `name` | String | User-provided portfolio name |
-| `cash` | Float | Cash amount included in the portfolio |
-| `created_at` | DateTime | Timestamp for when the portfolio was created |
+| id | Integer | Primary key |
+| name | String | User-facing portfolio name |
+| cash | Float | Cash amount included in portfolio value |
+| created_at | DateTime | Timestamp for when the portfolio was created |
 
-### Why this table exists
+### holding_records
 
-A portfolio is the parent record. It represents the overall portfolio container, while individual holdings and snapshots are stored in separate related tables.
-
-## Table: holding_records
-
-The `holding_records` table stores the individual holdings that belong to a portfolio.
+Stores holdings that belong to a saved portfolio.
 
 | Column | Type | Purpose |
 |---|---|---|
-| `id` | Integer | Primary key for the holding |
-| `portfolio_id` | Integer | Foreign key linking the holding to a portfolio |
-| `ticker` | String | Stock, ETF, or asset ticker |
-| `quantity` | Float | Number of shares or units |
-| `price` | Float | Manually entered price per unit |
-| `asset_class` | String | Asset class such as stock, ETF, bond, or cash equivalent |
-| `sector` | String | Sector such as technology, financials, healthcare, or broad market |
+| id | Integer | Primary key |
+| portfolio_id | Integer | Foreign key to portfolio_records.id |
+| ticker | String | Stock or ETF ticker |
+| quantity | Float | Number of shares or units |
+| price | Float | Price per share or unit |
+| asset_class | String | Asset class such as stock, ETF, bond, or cash-like |
+| sector | String | Sector grouping used for portfolio breakdowns |
 
-### Why holdings are stored separately
+### portfolio_snapshots
 
-Holdings are stored in their own table because a portfolio can have many holdings. If holdings were stored as columns directly on the portfolio table, the database would need a fixed number of holding columns such as `ticker_1`, `ticker_2`, `ticker_3`, and so on.
-
-That would be hard to query, hard to update, and would not scale as users add different numbers of holdings. A separate holdings table allows each portfolio to have any number of holdings while keeping the schema clean and flexible.
-
-## Table: portfolio_snapshots
-
-The `portfolio_snapshots` table stores saved calculation results for a portfolio at a point in time.
+Stores calculated portfolio analysis results at a point in time.
 
 | Column | Type | Purpose |
 |---|---|---|
-| `id` | Integer | Primary key for the snapshot |
-| `portfolio_id` | Integer | Foreign key linking the snapshot to a portfolio |
-| `total_portfolio_value` | Float | Total value of holdings plus cash |
-| `total_holdings_value` | Float | Total market value of holdings only |
-| `cash_percentage` | Float | Percentage of the portfolio held as cash |
-| `created_at` | DateTime | Timestamp for when the snapshot was created |
-
-### Why snapshots are stored separately
-
-Snapshots are stored separately because portfolio calculations can change over time as prices, holdings, and cash values change.
-
-Saving snapshots makes it possible to compare portfolio values across different points in time without overwriting older calculation results.
-
-## Text ERD
-
-```text
-portfolio_records
-  id
-  name
-  cash
-  created_at
-      |
-      | one portfolio has many holdings
-      v
-holding_records
-  id
-  portfolio_id
-  ticker
-  quantity
-  price
-  asset_class
-  sector
-
-
-portfolio_records
-  id
-  name
-  cash
-  created_at
-      |
-      | one portfolio has many snapshots
-      v
-portfolio_snapshots
-  id
-  portfolio_id
-  total_portfolio_value
-  total_holdings_value
-  cash_percentage
-  created_at
-```
+| id | Integer | Primary key |
+| portfolio_id | Integer | Foreign key to portfolio_records.id |
+| total_portfolio_value | Float | Total holdings value plus cash |
+| total_holdings_value | Float | Total value of all holdings |
+| cash_percentage | Float | Cash as a percentage of total portfolio value |
+| created_at | DateTime | Timestamp for when the snapshot was created |
 
 ## Relationships
 
@@ -120,7 +63,13 @@ One portfolio can have many holdings.
 portfolio_records.id -> holding_records.portfolio_id
 ```
 
-This is a one-to-many relationship.
+The SQLAlchemy relationship uses:
+
+```text
+cascade="all, delete-orphan"
+```
+
+This means deleting a portfolio also deletes its related holdings.
 
 ### portfolio_records to portfolio_snapshots
 
@@ -130,74 +79,71 @@ One portfolio can have many snapshots.
 portfolio_records.id -> portfolio_snapshots.portfolio_id
 ```
 
-This is also a one-to-many relationship.
-
-## Index Plan
-
-The current MVP should prioritize indexes on foreign keys used for lookups.
-
-### Current MVP indexes
-
-| Table | Column | Reason |
-|---|---|---|
-| `holding_records` | `portfolio_id` | Quickly retrieve all holdings for a portfolio |
-| `portfolio_snapshots` | `portfolio_id` | Quickly retrieve all snapshots for a portfolio |
-
-These indexes support the most common backend access patterns:
-
-1. Load a saved portfolio.
-2. Retrieve all holdings for that portfolio.
-3. Retrieve snapshot history for that portfolio.
-
-## Future Auth Extension
-
-Authentication is not part of the current MVP.
-
-If authentication is added later, the project may introduce a future `users` table.
-
-Possible future table:
+The SQLAlchemy relationship also uses:
 
 ```text
-users
-  id
-  email
-  created_at
+cascade="all, delete-orphan"
 ```
 
-Possible future relationship:
+This means deleting a portfolio also deletes its related snapshots.
+
+## Indexes
+
+The current MVP explicitly indexes primary key columns through SQLAlchemy:
+
+- portfolio_records.id
+- holding_records.id
+- portfolio_snapshots.id
+
+Foreign key fields are used for lookups:
+
+- holding_records.portfolio_id
+- portfolio_snapshots.portfolio_id
+
+For the current MVP size, these are sufficient. If portfolio history grows, the next likely index would be:
 
 ```text
-users.id -> portfolio_records.user_id
+portfolio_snapshots.portfolio_id, portfolio_snapshots.created_at
 ```
 
-Possible future index:
+That would make snapshot history queries faster.
 
-| Table | Column | Reason |
-|---|---|---|
-| `users` | `email` | Quickly find a user account by email during login or account lookup |
+## Tradeoffs
 
-The `users` table is intentionally documented as future scope so the current MVP remains focused on portfolio storage and analysis.
+### Float values
 
-## Design Summary
+The MVP uses `Float` for money-like values such as cash, price, and portfolio value.
 
-The database is designed around three main ideas:
+This is simple for the current prototype and makes calculations straightforward.
 
-1. A portfolio is the parent record.
-2. Holdings are separate child records because each portfolio can contain many holdings.
-3. Snapshots are separate child records because calculated results can be saved over time.
+A production financial system should consider fixed precision decimal types instead of floats.
 
-This keeps the schema normalized, flexible, and aligned with the current Portfolio Optimizer MVP.
+### Manual table creation
 
-## Development Table Creation
+The MVP uses `Base.metadata.create_all()` through `scripts/create_tables.py` for local development.
 
-For local development, database tables can be created with:
+This is acceptable for the MVP because the schema is small and changing quickly.
 
-```bash
-python scripts/create_tables.py
+A production system should use migrations, such as Alembic, instead of relying on `create_all()`.
+
+### Snapshots store summary values only
+
+Portfolio snapshots currently store:
+
+- total_portfolio_value
+- total_holdings_value
+- cash_percentage
+
+They do not store every holding weight, sector breakdown, or asset class breakdown.
+
+This keeps the snapshot table simple. If historical dashboard views need full breakdowns later, the project can add a richer snapshot detail table or JSON column.
+
+### Store service layer
+
+Database logic is being moved into:
+
+```text
+backend/services/portfolio_store.py
 ```
 
-This script calls SQLAlchemy's Base.metadata.create_all().
-
-create_all() is intended only for local MVP development and initial testing. It does not provide versioned schema migrations and should not be used as the production migration strategy.
-
-A future production version should use a migration tool such as Alembic.
+This keeps route files smaller and makes database behavior easier to test and maintain.

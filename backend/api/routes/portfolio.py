@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import HoldingRecord, PortfolioRecord, PortfolioSnapshot
 from backend.schemas.portfolio import (
     HoldingInput,
     HoldingRecordResponse,
@@ -14,6 +13,21 @@ from backend.schemas.portfolio import (
     PortfolioUpdateRequest,
 )
 from backend.services.portfolio_analysis import analyze_portfolio
+from backend.services.portfolio_store import (
+    create_holding_record,
+    create_portfolio_record,
+    create_portfolio_snapshot,
+    delete_holding_record,
+    delete_portfolio_record,
+    get_holding_record,
+    get_portfolio_record,
+    list_portfolio_records,
+    list_portfolio_snapshots,
+    serialize_portfolio_with_holdings,
+    serialize_snapshot,
+    update_holding_record,
+    update_portfolio_record,
+)
 
 router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
@@ -28,25 +42,7 @@ def analyze(request: PortfolioAnalyzeRequest):
 
 @router.post("", response_model=PortfolioRecordResponse)
 def create_portfolio(request: PortfolioCreateRequest, db: Session = Depends(get_db)):
-    portfolio = PortfolioRecord(name=request.name, cash=request.cash)
-    db.add(portfolio)
-    db.flush()
-
-    for holding in request.holdings:
-        db.add(
-            HoldingRecord(
-                portfolio_id=portfolio.id,
-                ticker=holding.ticker.upper().strip(),
-                quantity=holding.quantity,
-                price=holding.price,
-                asset_class=holding.asset_class.lower().strip(),
-                sector=holding.sector.lower().strip(),
-            )
-        )
-
-    db.commit()
-    db.refresh(portfolio)
-    return portfolio
+    return create_portfolio_record(db, request)
 
 
 @router.post(
@@ -59,59 +55,27 @@ def create_holding(
     request: HoldingInput,
     db: Session = Depends(get_db),
 ):
-    portfolio = (
-        db.query(PortfolioRecord)
-        .filter(PortfolioRecord.id == portfolio_id)
-        .first()
-    )
+    portfolio = get_portfolio_record(db, portfolio_id)
 
     if not portfolio:
         raise HTTPException(status_code=404, detail="portfolio not found")
 
-    holding = HoldingRecord(
-        portfolio_id=portfolio.id,
-        ticker=request.ticker.upper().strip(),
-        quantity=request.quantity,
-        price=request.price,
-        asset_class=request.asset_class.lower().strip(),
-        sector=request.sector.lower().strip(),
-    )
-
-    db.add(holding)
-    db.commit()
-    db.refresh(holding)
-
-    return holding
+    return create_holding_record(db, portfolio, request)
 
 
 @router.get("", response_model=list[PortfolioRecordResponse])
 def list_portfolios(db: Session = Depends(get_db)):
-    return db.query(PortfolioRecord).order_by(PortfolioRecord.id.desc()).all()
+    return list_portfolio_records(db)
 
 
 @router.get("/{portfolio_id}")
 def get_portfolio(portfolio_id: int, db: Session = Depends(get_db)):
-    portfolio = db.query(PortfolioRecord).filter(PortfolioRecord.id == portfolio_id).first()
+    portfolio = get_portfolio_record(db, portfolio_id)
 
     if not portfolio:
         raise HTTPException(status_code=404, detail="portfolio not found")
 
-    return {
-        "id": portfolio.id,
-        "name": portfolio.name,
-        "cash": portfolio.cash,
-        "holdings": [
-            {
-                "id": holding.id,
-                "ticker": holding.ticker,
-                "quantity": holding.quantity,
-                "price": holding.price,
-                "asset_class": holding.asset_class,
-                "sector": holding.sector,
-            }
-            for holding in portfolio.holdings
-        ],
-    }
+    return serialize_portfolio_with_holdings(portfolio)
 
 
 @router.patch("/{portfolio_id}", response_model=PortfolioRecordResponse)
@@ -120,31 +84,22 @@ def update_portfolio(
     request: PortfolioUpdateRequest,
     db: Session = Depends(get_db),
 ):
-    portfolio = db.query(PortfolioRecord).filter(PortfolioRecord.id == portfolio_id).first()
+    portfolio = get_portfolio_record(db, portfolio_id)
 
     if not portfolio:
         raise HTTPException(status_code=404, detail="portfolio not found")
 
-    if request.name is not None:
-        portfolio.name = request.name
-
-    if request.cash is not None:
-        portfolio.cash = request.cash
-
-    db.commit()
-    db.refresh(portfolio)
-    return portfolio
+    return update_portfolio_record(db, portfolio, request)
 
 
 @router.delete("/{portfolio_id}")
 def delete_portfolio(portfolio_id: int, db: Session = Depends(get_db)):
-    portfolio = db.query(PortfolioRecord).filter(PortfolioRecord.id == portfolio_id).first()
+    portfolio = get_portfolio_record(db, portfolio_id)
 
     if not portfolio:
         raise HTTPException(status_code=404, detail="portfolio not found")
 
-    db.delete(portfolio)
-    db.commit()
+    delete_portfolio_record(db, portfolio)
 
     return {"message": "portfolio deleted"}
 
@@ -158,34 +113,12 @@ def update_holding(
     request: HoldingUpdateRequest,
     db: Session = Depends(get_db),
 ):
-    holding = (
-        db.query(HoldingRecord)
-        .filter(HoldingRecord.id == holding_id)
-        .first()
-    )
+    holding = get_holding_record(db, holding_id)
 
     if not holding:
         raise HTTPException(status_code=404, detail="holding not found")
 
-    if request.ticker is not None:
-        holding.ticker = request.ticker.upper().strip()
-
-    if request.quantity is not None:
-        holding.quantity = request.quantity
-
-    if request.price is not None:
-        holding.price = request.price
-
-    if request.asset_class is not None:
-        holding.asset_class = request.asset_class.lower().strip()
-
-    if request.sector is not None:
-        holding.sector = request.sector.lower().strip()
-
-    db.commit()
-    db.refresh(holding)
-
-    return holding
+    return update_holding_record(db, holding, request)
 
 
 @router.delete("/holdings/{holding_id}")
@@ -193,59 +126,35 @@ def delete_holding(
     holding_id: int,
     db: Session = Depends(get_db),
 ):
-    holding = (
-        db.query(HoldingRecord)
-        .filter(HoldingRecord.id == holding_id)
-        .first()
-    )
+    holding = get_holding_record(db, holding_id)
 
     if not holding:
         raise HTTPException(status_code=404, detail="holding not found")
 
-    db.delete(holding)
-    db.commit()
+    delete_holding_record(db, holding)
 
     return {"message": "holding deleted"}
 
+
 @router.post("/{portfolio_id}/snapshot")
 def create_snapshot(portfolio_id: int, db: Session = Depends(get_db)):
-    portfolio = db.query(PortfolioRecord).filter(PortfolioRecord.id == portfolio_id).first()
+    portfolio = get_portfolio_record(db, portfolio_id)
 
     if not portfolio:
         raise HTTPException(status_code=404, detail="portfolio not found")
 
-    request = PortfolioAnalyzeRequest(
-        cash=portfolio.cash,
-        holdings=[
-            {
-                "ticker": holding.ticker,
-                "quantity": holding.quantity,
-                "price": holding.price,
-                "asset_class": holding.asset_class,
-                "sector": holding.sector,
-            }
-            for holding in portfolio.holdings
-        ],
-    )
+    snapshot = create_portfolio_snapshot(db, portfolio)
 
-    analysis = analyze_portfolio(request)
+    return serialize_snapshot(snapshot)
 
-    snapshot = PortfolioSnapshot(
-        portfolio_id=portfolio.id,
-        total_portfolio_value=analysis["total_portfolio_value"],
-        total_holdings_value=analysis["total_holdings_value"],
-        cash_percentage=analysis["cash_percentage"],
-    )
 
-    db.add(snapshot)
-    db.commit()
-    db.refresh(snapshot)
+@router.get("/{portfolio_id}/snapshots")
+def get_snapshots(portfolio_id: int, db: Session = Depends(get_db)):
+    portfolio = get_portfolio_record(db, portfolio_id)
 
-    return {
-        "id": snapshot.id,
-        "portfolio_id": snapshot.portfolio_id,
-        "total_portfolio_value": snapshot.total_portfolio_value,
-        "total_holdings_value": snapshot.total_holdings_value,
-        "cash_percentage": snapshot.cash_percentage,
-        "created_at": snapshot.created_at,
-    }
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="portfolio not found")
+
+    snapshots = list_portfolio_snapshots(db, portfolio_id)
+
+    return [serialize_snapshot(snapshot) for snapshot in snapshots]

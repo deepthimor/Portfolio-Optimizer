@@ -145,3 +145,41 @@ def test_invalid_holding_id_returns_clean_404(client):
 
     assert delete_response.status_code == 404
     assert delete_response.json() == {"detail": "holding not found"}
+
+def test_create_and_list_portfolio_snapshots(client, saved_portfolio_payload):
+    create_response = client.post(
+        "/api/portfolio",
+        json=saved_portfolio_payload,
+    )
+
+    portfolio_id = create_response.json()["id"]
+
+    snapshot_response = client.post(f"/api/portfolio/{portfolio_id}/snapshot")
+
+    assert snapshot_response.status_code == 200
+
+    snapshot = snapshot_response.json()
+
+    assert snapshot["portfolio_id"] == portfolio_id
+    assert snapshot["total_portfolio_value"] == 5775
+    assert snapshot["total_holdings_value"] == 3275
+    assert snapshot["cash_percentage"] == 43.29
+
+    list_response = client.get(f"/api/portfolio/{portfolio_id}/snapshots")
+
+    assert list_response.status_code == 200
+
+    snapshots = list_response.json()
+
+    assert len(snapshots) == 1
+    assert snapshots[0]["portfolio_id"] == portfolio_id
+    assert snapshots[0]["total_portfolio_value"] == 5775
+    assert snapshots[0]["total_holdings_value"] == 3275
+    assert snapshots[0]["cash_percentage"] == 43.29
+
+
+def test_invalid_portfolio_id_returns_clean_404_for_snapshots(client):
+    response = client.get("/api/portfolio/999999/snapshots")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "portfolio not found"}

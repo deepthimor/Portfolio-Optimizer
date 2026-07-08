@@ -225,6 +225,45 @@ API health: http://127.0.0.1:8000/health
 API docs: http://127.0.0.1:8000/docs
 ```
 
+## Database Setup and Schema Summary
+
+The MVP uses PostgreSQL for saved portfolio storage.
+
+Start the local database with Docker Compose:
+
+```bash
+docker-compose up -d postgres redis
+```
+
+Create local database tables:
+
+```bash
+python scripts/create_tables.py
+```
+
+The main database tables are:
+
+| Table | Purpose |
+|---|---|
+| portfolio_records | Stores saved portfolio metadata such as name and cash |
+| holding_records | Stores holdings attached to saved portfolios |
+| portfolio_snapshots | Stores saved analysis snapshots for portfolios |
+
+Relationship summary:
+
+```text
+portfolio_records 1 -> many holding_records
+portfolio_records 1 -> many portfolio_snapshots
+```
+
+Deleting a portfolio also deletes related holdings and snapshots through SQLAlchemy cascade behavior.
+
+Detailed database design notes are available in:
+
+```text
+docs/database-design.md
+```
+
 ### Frontend Setup
 
 Open a second terminal:
@@ -358,6 +397,7 @@ Additional project documentation is available in the `docs/` folder:
 * `docs/product-spec.md` describes the product scope and current MVP.
 * `docs/api-examples.md` provides API examples.
 * `docs/edge-cases.md` explains validation, duplicate ticker behavior, cash handling, rounding, and tested portfolio scenarios.
+* `docs/database-design.md` explains schema, relationships, indexes, and database tradeoffs.
 
 ## Testing
 
