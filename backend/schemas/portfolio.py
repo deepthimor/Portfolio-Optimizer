@@ -29,6 +29,8 @@ class TopHolding(BaseModel):
     ticker: str
     market_value: float
     weight: float
+    asset_class: str
+    sector: str
 
 
 class PortfolioAnalyzeResponse(BaseModel):
@@ -36,6 +38,12 @@ class PortfolioAnalyzeResponse(BaseModel):
     total_holdings_value: float
     cash: float
     cash_percentage: float
+    number_of_holdings: int
+    largest_holding: str
+    largest_sector: str
+    top_1_percentage: float
+    top_3_percentage: float
+    top_5_percentage: float
     holdings: List[HoldingAnalysis]
     top_holdings: List[TopHolding]
     sector_breakdown: Dict[str, float]

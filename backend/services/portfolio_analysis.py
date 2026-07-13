@@ -1,9 +1,16 @@
 from collections import defaultdict
+
 from backend.schemas.portfolio import PortfolioAnalyzeRequest
 
 
 def round_value(value: float) -> float:
     return round(value, 2)
+
+
+def get_concentration_percentage(holdings: list[dict], count: int) -> float:
+    return round_value(
+        sum(holding["weight"] for holding in holdings[:count])
+    )
 
 
 def analyze_portfolio(request: PortfolioAnalyzeRequest) -> dict:
@@ -40,13 +47,15 @@ def analyze_portfolio(request: PortfolioAnalyzeRequest) -> dict:
         sector_totals[sector] += market_value
         asset_class_totals[asset_class] += market_value
 
-    analyzed_holdings.sort(key=lambda item: item["market_value"], reverse=True)
+    analyzed_holdings.sort(key=lambda item: item["weight"], reverse=True)
 
     top_holdings = [
         {
             "ticker": holding["ticker"],
             "market_value": holding["market_value"],
             "weight": holding["weight"],
+            "asset_class": holding["asset_class"],
+            "sector": holding["sector"],
         }
         for holding in analyzed_holdings[:5]
     ]
@@ -61,11 +70,23 @@ def analyze_portfolio(request: PortfolioAnalyzeRequest) -> dict:
         for asset_class, value in asset_class_totals.items()
     }
 
+    largest_holding = analyzed_holdings[0]["ticker"] if analyzed_holdings else None
+    largest_sector = max(
+        sector_breakdown,
+        key=sector_breakdown.get,
+    )
+
     return {
         "total_portfolio_value": round_value(total_value),
         "total_holdings_value": round_value(holdings_value),
         "cash": round_value(request.cash),
         "cash_percentage": round_value((request.cash / total_value) * 100),
+        "number_of_holdings": len(analyzed_holdings),
+        "largest_holding": largest_holding,
+        "largest_sector": largest_sector,
+        "top_1_percentage": get_concentration_percentage(analyzed_holdings, 1),
+        "top_3_percentage": get_concentration_percentage(analyzed_holdings, 3),
+        "top_5_percentage": get_concentration_percentage(analyzed_holdings, 5),
         "holdings": analyzed_holdings,
         "top_holdings": top_holdings,
         "sector_breakdown": sector_breakdown,

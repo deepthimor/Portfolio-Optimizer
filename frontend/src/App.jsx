@@ -62,6 +62,12 @@ const sampleAnalysis = {
   total_holdings_value: 12680,
   cash: 2500,
   cash_percentage: 16.47,
+  number_of_holdings: 3,
+  largest_holding: "VTI",
+  largest_sector: "technology",
+  top_1_percentage: 30.83,
+  top_3_percentage: 83.53,
+  top_5_percentage: 83.53,
   holdings: [
     {
       ticker: "VTI",
@@ -96,16 +102,22 @@ const sampleAnalysis = {
       ticker: "VTI",
       market_value: 4680,
       weight: 30.83,
+      asset_class: "etf",
+      sector: "broad market",
     },
     {
       ticker: "MSFT",
       market_value: 4200,
       weight: 27.67,
+      asset_class: "stock",
+      sector: "technology",
     },
     {
       ticker: "AAPL",
       market_value: 3800,
       weight: 25.03,
+      asset_class: "stock",
+      sector: "technology",
     },
   ],
   sector_breakdown: {
@@ -134,17 +146,11 @@ function objectToChartData(source) {
 }
 
 function getConcentrationMetrics(analysis) {
-  const topHoldings = analysis?.top_holdings || [];
-  const largestHolding = topHoldings[0];
-
-  const topThreeWeight = topHoldings
-    .slice(0, 3)
-    .reduce((total, holding) => total + Number(holding.weight || 0), 0);
-
   return {
-    largestHoldingName: largestHolding?.ticker || "N/A",
-    largestHoldingWeight: largestHolding?.weight || 0,
-    topThreeWeight: Number(topThreeWeight.toFixed(2)),
+    largestHoldingName: analysis?.largest_holding || "N/A",
+    largestHoldingWeight: analysis?.top_1_percentage || 0,
+    topThreeWeight: analysis?.top_3_percentage || 0,
+    topFiveWeight: analysis?.top_5_percentage || 0,
   };
 }
 
@@ -294,23 +300,28 @@ function SummaryCards({ analysis, isSample }) {
 
       <div className="summary-grid">
         <article className="summary-card">
-          <span>Total Portfolio Value</span>
+          <span>Total Value</span>
           <strong>{formatCurrency(analysis.total_portfolio_value)}</strong>
-        </article>
-
-        <article className="summary-card">
-          <span>Total Holdings Value</span>
-          <strong>{formatCurrency(analysis.total_holdings_value)}</strong>
-        </article>
-
-        <article className="summary-card">
-          <span>Cash</span>
-          <strong>{formatCurrency(analysis.cash)}</strong>
         </article>
 
         <article className="summary-card">
           <span>Cash Percentage</span>
           <strong>{analysis.cash_percentage}%</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Number of Holdings</span>
+          <strong>{analysis.number_of_holdings}</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Largest Holding</span>
+          <strong>{analysis.largest_holding}</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Largest Sector</span>
+          <strong>{analysis.largest_sector}</strong>
         </article>
       </div>
     </section>
@@ -364,16 +375,20 @@ function AllocationCharts({ analysis, isSample }) {
   );
 }
 
-function HoldingsTable({ holdings }) {
+function TopHoldingsTable({ topHoldings }) {
+  const sortedTopHoldings = [...topHoldings].sort(
+    (firstHolding, secondHolding) => secondHolding.weight - firstHolding.weight,
+  );
+
   return (
     <section className="dashboard-section">
-      <h2>Holdings Table</h2>
+      <h2>Top Holdings Table</h2>
 
       <table>
         <thead>
           <tr>
             <th>Ticker</th>
-            <th>Market Value</th>
+            <th>Value</th>
             <th>Weight</th>
             <th>Asset Class</th>
             <th>Sector</th>
@@ -381,7 +396,7 @@ function HoldingsTable({ holdings }) {
         </thead>
 
         <tbody>
-          {holdings.map((holding) => (
+          {sortedTopHoldings.map((holding) => (
             <tr key={`${holding.ticker}-${holding.market_value}`}>
               <td>{holding.ticker}</td>
               <td>{formatCurrency(holding.market_value)}</td>
@@ -399,7 +414,7 @@ function HoldingsTable({ holdings }) {
 function TopHoldings({ topHoldings }) {
   return (
     <section className="dashboard-section">
-      <h2>Top Holdings</h2>
+      <h2>Top Holdings Chart</h2>
 
       <ResponsiveContainer width="100%" height={260}>
         <BarChart data={topHoldings}>
@@ -430,18 +445,18 @@ function ConcentrationCards({ analysis }) {
 
       <div className="summary-grid">
         <article className="summary-card">
-          <span>Largest Holding</span>
-          <strong>{concentration.largestHoldingName}</strong>
-        </article>
-
-        <article className="summary-card">
-          <span>Largest Holding Weight</span>
+          <span>Top 1 Concentration</span>
           <strong>{concentration.largestHoldingWeight}%</strong>
         </article>
 
         <article className="summary-card">
-          <span>Top 3 Holdings Weight</span>
+          <span>Top 3 Concentration</span>
           <strong>{concentration.topThreeWeight}%</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Top 5 Concentration</span>
+          <strong>{concentration.topFiveWeight}%</strong>
         </article>
       </div>
     </section>
@@ -464,8 +479,10 @@ function FutureAiSummaryPanel({ analysis }) {
         Current summary input could include total value of{" "}
         <strong>{formatCurrency(analysis.total_portfolio_value)}</strong>, cash
         percentage of <strong>{analysis.cash_percentage}%</strong>, largest
-        holding <strong>{concentration.largestHoldingName}</strong>, and top
-        three concentration of <strong>{concentration.topThreeWeight}%</strong>.
+        holding <strong>{concentration.largestHoldingName}</strong>, top three
+        concentration of <strong>{concentration.topThreeWeight}%</strong>, and
+        top five concentration of{" "}
+        <strong>{concentration.topFiveWeight}%</strong>.
       </p>
     </section>
   );
@@ -479,7 +496,7 @@ function Dashboard({ analysis, hasAnalysis }) {
     <>
       <SummaryCards analysis={dashboardAnalysis} isSample={isSample} />
       <AllocationCharts analysis={dashboardAnalysis} isSample={isSample} />
-      <HoldingsTable holdings={dashboardAnalysis.holdings} />
+      <TopHoldingsTable topHoldings={dashboardAnalysis.top_holdings} />
       <TopHoldings topHoldings={dashboardAnalysis.top_holdings} />
       <ConcentrationCards analysis={dashboardAnalysis} />
       <FutureAiSummaryPanel analysis={dashboardAnalysis} />
@@ -636,7 +653,10 @@ function App() {
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const hasAnalysis = useMemo(() => Boolean(portfolioAnalysis), [portfolioAnalysis]);
+  const hasAnalysis = useMemo(
+    () => Boolean(portfolioAnalysis),
+    [portfolioAnalysis],
+  );
 
   useEffect(() => {
     refreshSavedPortfolios();
