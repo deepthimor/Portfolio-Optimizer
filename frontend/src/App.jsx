@@ -1,4 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   analyzePortfolio,
   createPortfolio,
@@ -45,6 +57,572 @@ const samplePortfolio = {
   ],
 };
 
+const sampleAnalysis = {
+  total_portfolio_value: 15180,
+  total_holdings_value: 12680,
+  cash: 2500,
+  cash_percentage: 16.47,
+  holdings: [
+    {
+      ticker: "VTI",
+      quantity: 18,
+      price: 260,
+      market_value: 4680,
+      weight: 30.83,
+      asset_class: "etf",
+      sector: "broad market",
+    },
+    {
+      ticker: "MSFT",
+      quantity: 10,
+      price: 420,
+      market_value: 4200,
+      weight: 27.67,
+      asset_class: "stock",
+      sector: "technology",
+    },
+    {
+      ticker: "AAPL",
+      quantity: 20,
+      price: 190,
+      market_value: 3800,
+      weight: 25.03,
+      asset_class: "stock",
+      sector: "technology",
+    },
+  ],
+  top_holdings: [
+    {
+      ticker: "VTI",
+      market_value: 4680,
+      weight: 30.83,
+    },
+    {
+      ticker: "MSFT",
+      market_value: 4200,
+      weight: 27.67,
+    },
+    {
+      ticker: "AAPL",
+      market_value: 3800,
+      weight: 25.03,
+    },
+  ],
+  sector_breakdown: {
+    technology: 52.7,
+    "broad market": 30.83,
+  },
+  asset_class_breakdown: {
+    stock: 52.7,
+    etf: 30.83,
+  },
+};
+
+const chartColors = ["#60a5fa", "#34d399", "#fbbf24", "#f472b6", "#a78bfa"];
+
+function formatCurrency(value) {
+  return `$${Number(value || 0).toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function objectToChartData(source) {
+  return Object.entries(source || {}).map(([name, value]) => ({
+    name,
+    value,
+  }));
+}
+
+function getConcentrationMetrics(analysis) {
+  const topHoldings = analysis?.top_holdings || [];
+  const largestHolding = topHoldings[0];
+
+  const topThreeWeight = topHoldings
+    .slice(0, 3)
+    .reduce((total, holding) => total + Number(holding.weight || 0), 0);
+
+  return {
+    largestHoldingName: largestHolding?.ticker || "N/A",
+    largestHoldingWeight: largestHolding?.weight || 0,
+    topThreeWeight: Number(topThreeWeight.toFixed(2)),
+  };
+}
+
+function PortfolioForm({
+  portfolioName,
+  setPortfolioName,
+  cash,
+  setCash,
+  holdings,
+  updateHoldingInput,
+  addHoldingInput,
+  removeHoldingInput,
+  loadSamplePortfolio,
+  clearPortfolioForm,
+  handleAnalyze,
+  handleSavePortfolio,
+  isLoading,
+}) {
+  return (
+    <form onSubmit={handleAnalyze} className="input-panel">
+      <div className="form-grid">
+        <label>
+          Portfolio Name
+          <input
+            value={portfolioName}
+            onChange={(event) => setPortfolioName(event.target.value)}
+            placeholder="My Portfolio"
+          />
+        </label>
+
+        <label>
+          Cash
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={cash}
+            onChange={(event) => setCash(event.target.value)}
+          />
+        </label>
+      </div>
+
+      <h2>Holdings Input</h2>
+
+      {holdings.map((holding, index) => (
+        <section key={index} className="holding-input-row">
+          <input
+            placeholder="ticker"
+            value={holding.ticker}
+            onChange={(event) =>
+              updateHoldingInput(index, "ticker", event.target.value)
+            }
+          />
+
+          <input
+            placeholder="quantity"
+            type="number"
+            min="0"
+            step="0.01"
+            value={holding.quantity}
+            onChange={(event) =>
+              updateHoldingInput(index, "quantity", event.target.value)
+            }
+          />
+
+          <input
+            placeholder="price"
+            type="number"
+            min="0"
+            step="0.01"
+            value={holding.price}
+            onChange={(event) =>
+              updateHoldingInput(index, "price", event.target.value)
+            }
+          />
+
+          <input
+            placeholder="asset class"
+            value={holding.asset_class}
+            onChange={(event) =>
+              updateHoldingInput(index, "asset_class", event.target.value)
+            }
+          />
+
+          <input
+            placeholder="sector"
+            value={holding.sector}
+            onChange={(event) =>
+              updateHoldingInput(index, "sector", event.target.value)
+            }
+          />
+
+          <button type="button" onClick={() => removeHoldingInput(index)}>
+            Remove
+          </button>
+        </section>
+      ))}
+
+      <div className="button-row">
+        <button type="button" onClick={addHoldingInput}>
+          Add Holding
+        </button>
+
+        <button type="button" onClick={loadSamplePortfolio}>
+          Load Sample
+        </button>
+
+        <button type="button" onClick={clearPortfolioForm}>
+          Clear
+        </button>
+
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? "Analyzing..." : "Analyze Portfolio"}
+        </button>
+
+        <button type="button" onClick={handleSavePortfolio} disabled={isLoading}>
+          Save Portfolio
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function StatusArea({ isLoading, error, success, hasAnalysis }) {
+  return (
+    <section className="status-area">
+      {isLoading && <p className="loading">Analyzing portfolio...</p>}
+      {error && <p className="error">{error}</p>}
+      {success && <p className="success">{success}</p>}
+      {!isLoading && !error && !success && !hasAnalysis && (
+        <p className="empty-state">
+          No portfolio analyzed yet. Enter holdings or load the sample portfolio
+          to see dashboard results.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function SummaryCards({ analysis, isSample }) {
+  return (
+    <section className="dashboard-section">
+      <div className="section-title-row">
+        <h2>Summary Cards</h2>
+        {isSample && <span className="sample-pill">sample preview</span>}
+      </div>
+
+      <div className="summary-grid">
+        <article className="summary-card">
+          <span>Total Portfolio Value</span>
+          <strong>{formatCurrency(analysis.total_portfolio_value)}</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Total Holdings Value</span>
+          <strong>{formatCurrency(analysis.total_holdings_value)}</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Cash</span>
+          <strong>{formatCurrency(analysis.cash)}</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Cash Percentage</span>
+          <strong>{analysis.cash_percentage}%</strong>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function BreakdownSection({ title, data }) {
+  return (
+    <article className="chart-card">
+      <h3>{title}</h3>
+
+      <ResponsiveContainer width="100%" height={260}>
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="name"
+            outerRadius={90}
+            label
+          >
+            {data.map((entry, index) => (
+              <Cell
+                key={entry.name}
+                fill={chartColors[index % chartColors.length]}
+              />
+            ))}
+          </Pie>
+          <Tooltip />
+        </PieChart>
+      </ResponsiveContainer>
+    </article>
+  );
+}
+
+function AllocationCharts({ analysis, isSample }) {
+  const assetClassData = objectToChartData(analysis.asset_class_breakdown);
+  const sectorData = objectToChartData(analysis.sector_breakdown);
+
+  return (
+    <section className="dashboard-section">
+      <div className="section-title-row">
+        <h2>Allocation Charts</h2>
+        {isSample && <span className="sample-pill">sample preview</span>}
+      </div>
+
+      <div className="chart-grid">
+        <BreakdownSection title="Asset Allocation" data={assetClassData} />
+        <BreakdownSection title="Sector Exposure" data={sectorData} />
+      </div>
+    </section>
+  );
+}
+
+function HoldingsTable({ holdings }) {
+  return (
+    <section className="dashboard-section">
+      <h2>Holdings Table</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Market Value</th>
+            <th>Weight</th>
+            <th>Asset Class</th>
+            <th>Sector</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {holdings.map((holding) => (
+            <tr key={`${holding.ticker}-${holding.market_value}`}>
+              <td>{holding.ticker}</td>
+              <td>{formatCurrency(holding.market_value)}</td>
+              <td>{holding.weight}%</td>
+              <td>{holding.asset_class}</td>
+              <td>{holding.sector}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+function TopHoldings({ topHoldings }) {
+  return (
+    <section className="dashboard-section">
+      <h2>Top Holdings</h2>
+
+      <ResponsiveContainer width="100%" height={260}>
+        <BarChart data={topHoldings}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="ticker" />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey="weight">
+            {topHoldings.map((holding, index) => (
+              <Cell
+                key={holding.ticker}
+                fill={chartColors[index % chartColors.length]}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </section>
+  );
+}
+
+function ConcentrationCards({ analysis }) {
+  const concentration = getConcentrationMetrics(analysis);
+
+  return (
+    <section className="dashboard-section">
+      <h2>Concentration Cards</h2>
+
+      <div className="summary-grid">
+        <article className="summary-card">
+          <span>Largest Holding</span>
+          <strong>{concentration.largestHoldingName}</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Largest Holding Weight</span>
+          <strong>{concentration.largestHoldingWeight}%</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Top 3 Holdings Weight</span>
+          <strong>{concentration.topThreeWeight}%</strong>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function FutureAiSummaryPanel({ analysis }) {
+  const concentration = getConcentrationMetrics(analysis);
+
+  return (
+    <section className="dashboard-section ai-panel">
+      <h2>Future AI Summary Panel</h2>
+
+      <p>
+        This panel will eventually explain backend-calculated metrics in plain
+        English. The AI layer should describe the numbers, not calculate them.
+      </p>
+
+      <p>
+        Current summary input could include total value of{" "}
+        <strong>{formatCurrency(analysis.total_portfolio_value)}</strong>, cash
+        percentage of <strong>{analysis.cash_percentage}%</strong>, largest
+        holding <strong>{concentration.largestHoldingName}</strong>, and top
+        three concentration of <strong>{concentration.topThreeWeight}%</strong>.
+      </p>
+    </section>
+  );
+}
+
+function Dashboard({ analysis, hasAnalysis }) {
+  const dashboardAnalysis = analysis || sampleAnalysis;
+  const isSample = !hasAnalysis;
+
+  return (
+    <>
+      <SummaryCards analysis={dashboardAnalysis} isSample={isSample} />
+      <AllocationCharts analysis={dashboardAnalysis} isSample={isSample} />
+      <HoldingsTable holdings={dashboardAnalysis.holdings} />
+      <TopHoldings topHoldings={dashboardAnalysis.top_holdings} />
+      <ConcentrationCards analysis={dashboardAnalysis} />
+      <FutureAiSummaryPanel analysis={dashboardAnalysis} />
+    </>
+  );
+}
+
+function SavedPortfolios({
+  savedPortfolios,
+  refreshSavedPortfolios,
+  handleSelectPortfolio,
+}) {
+  return (
+    <section>
+      <div className="section-header">
+        <h2>Saved Portfolios</h2>
+
+        <button type="button" onClick={refreshSavedPortfolios}>
+          Refresh
+        </button>
+      </div>
+
+      {savedPortfolios.length === 0 ? (
+        <p>No saved portfolios yet.</p>
+      ) : (
+        <div className="saved-portfolio-list">
+          {savedPortfolios.map((portfolio) => (
+            <button
+              type="button"
+              key={portfolio.id}
+              className="saved-portfolio-button"
+              onClick={() => handleSelectPortfolio(portfolio.id)}
+            >
+              {portfolio.name} — {formatCurrency(portfolio.cash)} cash
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SavedPortfolioDetails({
+  selectedPortfolio,
+  setSelectedPortfolio,
+  handleUpdateSelectedPortfolio,
+  handleDeleteSelectedPortfolio,
+  handleDeleteSavedHolding,
+}) {
+  if (!selectedPortfolio) {
+    return null;
+  }
+
+  return (
+    <section>
+      <h2>Saved Portfolio Details</h2>
+
+      <label>
+        Name
+        <input
+          value={selectedPortfolio.name}
+          onChange={(event) =>
+            setSelectedPortfolio({
+              ...selectedPortfolio,
+              name: event.target.value,
+            })
+          }
+        />
+      </label>
+
+      <label>
+        Cash
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={selectedPortfolio.cash}
+          onChange={(event) =>
+            setSelectedPortfolio({
+              ...selectedPortfolio,
+              cash: event.target.value,
+            })
+          }
+        />
+      </label>
+
+      <div className="portfolio-actions">
+        <button type="button" onClick={handleUpdateSelectedPortfolio}>
+          Update Portfolio
+        </button>
+
+        <button
+          type="button"
+          className="danger-button"
+          onClick={handleDeleteSelectedPortfolio}
+        >
+          Delete Portfolio
+        </button>
+      </div>
+
+      <h3>Saved Holdings</h3>
+
+      {selectedPortfolio.holdings.length === 0 ? (
+        <p>No holdings saved for this portfolio.</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Asset Class</th>
+              <th>Sector</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {selectedPortfolio.holdings.map((holding) => (
+              <tr key={holding.id}>
+                <td>{holding.ticker}</td>
+                <td>{holding.quantity}</td>
+                <td>{formatCurrency(holding.price)}</td>
+                <td>{holding.asset_class}</td>
+                <td>{holding.sector}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() => handleDeleteSavedHolding(holding.id)}
+                  >
+                    Delete Holding
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
 function App() {
   const [portfolioName, setPortfolioName] = useState("");
   const [cash, setCash] = useState(0);
@@ -57,6 +635,8 @@ function App() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const hasAnalysis = useMemo(() => Boolean(portfolioAnalysis), [portfolioAnalysis]);
 
   useEffect(() => {
     refreshSavedPortfolios();
@@ -96,9 +676,7 @@ function App() {
       return;
     }
 
-    setHoldings(
-      holdings.filter((_, currentIndex) => currentIndex !== index),
-    );
+    setHoldings(holdings.filter((_, currentIndex) => currentIndex !== index));
   }
 
   function buildPortfolioPayload() {
@@ -256,283 +834,48 @@ function App() {
       <h1>Portfolio Optimizer</h1>
 
       <p>
-        Analyze portfolios, save them to PostgreSQL, and manage saved holdings.
+        Analyze portfolios, save them to PostgreSQL, and understand allocation,
+        sector exposure, top holdings, and concentration at a glance.
       </p>
 
-      <form onSubmit={handleAnalyze}>
-        <label>
-          Portfolio Name
-          <input
-            value={portfolioName}
-            onChange={(event) => setPortfolioName(event.target.value)}
-            placeholder="My Portfolio"
-          />
-        </label>
+      <PortfolioForm
+        portfolioName={portfolioName}
+        setPortfolioName={setPortfolioName}
+        cash={cash}
+        setCash={setCash}
+        holdings={holdings}
+        updateHoldingInput={updateHoldingInput}
+        addHoldingInput={addHoldingInput}
+        removeHoldingInput={removeHoldingInput}
+        loadSamplePortfolio={loadSamplePortfolio}
+        clearPortfolioForm={clearPortfolioForm}
+        handleAnalyze={handleAnalyze}
+        handleSavePortfolio={handleSavePortfolio}
+        isLoading={isLoading}
+      />
 
-        <label>
-          Cash
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={cash}
-            onChange={(event) => setCash(event.target.value)}
-          />
-        </label>
+      <StatusArea
+        isLoading={isLoading}
+        error={error}
+        success={success}
+        hasAnalysis={hasAnalysis}
+      />
 
-        {holdings.map((holding, index) => (
-          <section key={index}>
-            <input
-              placeholder="ticker"
-              value={holding.ticker}
-              onChange={(event) =>
-                updateHoldingInput(index, "ticker", event.target.value)
-              }
-            />
+      <Dashboard analysis={portfolioAnalysis} hasAnalysis={hasAnalysis} />
 
-            <input
-              placeholder="quantity"
-              type="number"
-              min="0"
-              step="0.01"
-              value={holding.quantity}
-              onChange={(event) =>
-                updateHoldingInput(index, "quantity", event.target.value)
-              }
-            />
+      <SavedPortfolios
+        savedPortfolios={savedPortfolios}
+        refreshSavedPortfolios={refreshSavedPortfolios}
+        handleSelectPortfolio={handleSelectPortfolio}
+      />
 
-            <input
-              placeholder="price"
-              type="number"
-              min="0"
-              step="0.01"
-              value={holding.price}
-              onChange={(event) =>
-                updateHoldingInput(index, "price", event.target.value)
-              }
-            />
-
-            <input
-              placeholder="asset class"
-              value={holding.asset_class}
-              onChange={(event) =>
-                updateHoldingInput(index, "asset_class", event.target.value)
-              }
-            />
-
-            <input
-              placeholder="sector"
-              value={holding.sector}
-              onChange={(event) =>
-                updateHoldingInput(index, "sector", event.target.value)
-              }
-            />
-
-            <button
-              type="button"
-              onClick={() => removeHoldingInput(index)}
-            >
-              Remove
-            </button>
-          </section>
-        ))}
-
-        <button type="button" onClick={addHoldingInput}>
-          Add Holding
-        </button>
-
-        <button type="button" onClick={loadSamplePortfolio}>
-          Load Sample
-        </button>
-
-        <button type="button" onClick={clearPortfolioForm}>
-          Clear
-        </button>
-
-        <button type="submit" disabled={isLoading}>
-          Analyze Portfolio
-        </button>
-
-        <button
-          type="button"
-          onClick={handleSavePortfolio}
-          disabled={isLoading}
-        >
-          Save Portfolio
-        </button>
-      </form>
-
-      {success && <p className="success">{success}</p>}
-      {error && <p className="error">{error}</p>}
-
-      {portfolioAnalysis && (
-        <section>
-          <h2>Portfolio Summary</h2>
-
-          <p>
-            Total Portfolio Value: $
-            {portfolioAnalysis.total_portfolio_value}
-          </p>
-
-          <p>
-            Total Holdings Value: $
-            {portfolioAnalysis.total_holdings_value}
-          </p>
-
-          <p>Cash: ${portfolioAnalysis.cash}</p>
-
-          <p>
-            Cash Percentage: {portfolioAnalysis.cash_percentage}%
-          </p>
-
-          <h3>Holdings</h3>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Ticker</th>
-                <th>Market Value</th>
-                <th>Weight</th>
-                <th>Asset Class</th>
-                <th>Sector</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {portfolioAnalysis.holdings.map((holding) => (
-                <tr key={holding.ticker}>
-                  <td>{holding.ticker}</td>
-                  <td>${holding.market_value}</td>
-                  <td>{holding.weight}%</td>
-                  <td>{holding.asset_class}</td>
-                  <td>{holding.sector}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
-
-      <section>
-        <div className="section-header">
-          <h2>Saved Portfolios</h2>
-
-          <button type="button" onClick={refreshSavedPortfolios}>
-            Refresh
-          </button>
-        </div>
-
-        {savedPortfolios.length === 0 ? (
-          <p>No saved portfolios yet.</p>
-        ) : (
-          <div className="saved-portfolio-list">
-            {savedPortfolios.map((portfolio) => (
-              <button
-                type="button"
-                key={portfolio.id}
-                className="saved-portfolio-button"
-                onClick={() => handleSelectPortfolio(portfolio.id)}
-              >
-                {portfolio.name} — ${portfolio.cash} cash
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {selectedPortfolio && (
-        <section>
-          <h2>Saved Portfolio Details</h2>
-
-          <label>
-            Name
-            <input
-              value={selectedPortfolio.name}
-              onChange={(event) =>
-                setSelectedPortfolio({
-                  ...selectedPortfolio,
-                  name: event.target.value,
-                })
-              }
-            />
-          </label>
-
-          <label>
-            Cash
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={selectedPortfolio.cash}
-              onChange={(event) =>
-                setSelectedPortfolio({
-                  ...selectedPortfolio,
-                  cash: event.target.value,
-                })
-              }
-            />
-          </label>
-
-          <div className="portfolio-actions">
-            <button
-              type="button"
-              onClick={handleUpdateSelectedPortfolio}
-            >
-              Update Portfolio
-            </button>
-
-            <button
-              type="button"
-              className="danger-button"
-              onClick={handleDeleteSelectedPortfolio}
-            >
-              Delete Portfolio
-            </button>
-          </div>
-
-          <h3>Saved Holdings</h3>
-
-          {selectedPortfolio.holdings.length === 0 ? (
-            <p>No holdings saved for this portfolio.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Ticker</th>
-                  <th>Quantity</th>
-                  <th>Price</th>
-                  <th>Asset Class</th>
-                  <th>Sector</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {selectedPortfolio.holdings.map((holding) => (
-                  <tr key={holding.id}>
-                    <td>{holding.ticker}</td>
-                    <td>{holding.quantity}</td>
-                    <td>${holding.price}</td>
-                    <td>{holding.asset_class}</td>
-                    <td>{holding.sector}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="danger-button"
-                        onClick={() =>
-                          handleDeleteSavedHolding(holding.id)
-                        }
-                      >
-                        Delete Holding
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-      )}
+      <SavedPortfolioDetails
+        selectedPortfolio={selectedPortfolio}
+        setSelectedPortfolio={setSelectedPortfolio}
+        handleUpdateSelectedPortfolio={handleUpdateSelectedPortfolio}
+        handleDeleteSelectedPortfolio={handleDeleteSelectedPortfolio}
+        handleDeleteSavedHolding={handleDeleteSavedHolding}
+      />
     </main>
   );
 }
