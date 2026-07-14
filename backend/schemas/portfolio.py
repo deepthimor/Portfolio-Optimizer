@@ -33,6 +33,22 @@ class TopHolding(BaseModel):
     sector: str
 
 
+class AiSummarySections(BaseModel):
+    portfolio_overview: str
+    concentration_observations: str
+    allocation_observations: str
+    educational_note: str
+    limitations: str
+    risk_flags: str
+
+
+class AiSummaryResponse(BaseModel):
+    is_fallback: bool
+    message: str
+    sections: AiSummarySections
+    disclaimer: str
+
+
 class PortfolioAnalyzeResponse(BaseModel):
     total_portfolio_value: float
     total_holdings_value: float
@@ -48,6 +64,7 @@ class PortfolioAnalyzeResponse(BaseModel):
     top_holdings: List[TopHolding]
     sector_breakdown: Dict[str, float]
     asset_class_breakdown: Dict[str, float]
+    ai_summary: Optional[AiSummaryResponse] = None
     
 
 class PortfolioCreateRequest(BaseModel):

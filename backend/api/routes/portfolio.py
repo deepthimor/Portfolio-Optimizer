@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from backend.services.ai_summary import build_safe_ai_summary
 
 from backend.database import get_db
 from backend.schemas.portfolio import (
@@ -34,10 +35,12 @@ router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
 @router.post("/analyze", response_model=PortfolioAnalyzeResponse)
 def analyze(request: PortfolioAnalyzeRequest):
-    try:
-        return analyze_portfolio(request)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
+        try:
+            analysis = analyze_portfolio(request)
+            analysis["ai_summary"] = build_safe_ai_summary(analysis)
+            return analysis
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error))
 
 
 @router.post("", response_model=PortfolioRecordResponse)

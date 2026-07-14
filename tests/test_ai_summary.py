@@ -1,3 +1,4 @@
+from backend.services.ai_summary import build_safe_ai_summary
 from backend.services.ai_summary import (
     ALLOWED_AI_SUMMARY_FIELDS,
     AI_SUMMARY_PROMPT_TEMPLATE,
@@ -102,6 +103,36 @@ def test_fallback_summary_is_created_without_ai():
     ai_summary_input = build_ai_summary_input(sample_analysis())
     fallback = build_fallback_summary(ai_summary_input)
 
-    assert "This portfolio has a total value" in fallback
-    assert "not personalized financial advice" in fallback
-    assert "top 3 concentration" in fallback
+    assert fallback["is_fallback"] is True
+    assert fallback["message"] == "AI summary unavailable; deterministic metrics still shown."
+    assert fallback["disclaimer"] == "Educational information only; not financial advice."
+    assert "Total portfolio value" in fallback["sections"]["portfolio_overview"]
+    assert "top 3 concentration" in fallback["sections"]["concentration_observations"]
+    assert "not financial advice" in fallback["sections"]["educational_note"]
+
+
+def test_safe_ai_summary_has_required_sections():
+    summary = build_safe_ai_summary(sample_analysis())
+
+    assert summary["is_fallback"] is False
+    assert "portfolio_overview" in summary["sections"]
+    assert "concentration_observations" in summary["sections"]
+    assert "allocation_observations" in summary["sections"]
+    assert "educational_note" in summary["sections"]
+    assert "limitations" in summary["sections"]
+
+
+def test_safe_ai_summary_has_visible_disclaimer():
+    summary = build_safe_ai_summary(sample_analysis())
+
+    assert summary["disclaimer"] == "Educational information only; not financial advice."
+    assert "not financial advice" in summary["sections"]["educational_note"]
+
+
+def test_safe_ai_summary_fallback_keeps_dashboard_safe():
+    summary = build_safe_ai_summary(sample_analysis(), force_failure=True)
+
+    assert summary["is_fallback"] is True
+    assert summary["message"] == "AI summary unavailable; deterministic metrics still shown."
+    assert "portfolio_overview" in summary["sections"]
+    assert summary["disclaimer"] == "Educational information only; not financial advice."

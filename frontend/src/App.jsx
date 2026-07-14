@@ -124,6 +124,25 @@ const sampleAnalysis = {
     technology: 52.7,
     "broad market": 30.83,
   },
+  ai_summary: {
+    is_fallback: false,
+    message: "AI summary generated from deterministic metrics.",
+    disclaimer: "Educational information only; not financial advice.",
+    sections: {
+      portfolio_overview:
+        "Total portfolio value is $15,180.00. The portfolio has 3 holdings and 16.47% held in cash.",
+      concentration_observations:
+        "Top 1 concentration is 30.83%, top 3 concentration is 83.53%, and top 5 concentration is 83.53%. The largest holding is VTI.",
+      allocation_observations:
+        "The largest sector is technology. Asset allocation is stock and ETF. Sector allocation is technology and broad market.",
+      educational_note:
+        "Educational information only; not financial advice. This summary explains supplied metrics and does not recommend buying, selling, or holding any security.",
+      limitations:
+        "This summary is based only on user-supplied holdings and backend-calculated metrics.",
+      risk_flags:
+        "High single-holding concentration, High top-three concentration, High top-five concentration",
+    },
+  },
   asset_class_breakdown: {
     stock: 52.7,
     etf: 30.83,
@@ -464,26 +483,60 @@ function ConcentrationCards({ analysis }) {
 }
 
 function FutureAiSummaryPanel({ analysis }) {
-  const concentration = getConcentrationMetrics(analysis);
+  const aiSummary = analysis.ai_summary;
+
+  if (!aiSummary) {
+    return (
+      <section className="dashboard-section ai-panel">
+        <h2>AI Summary Panel</h2>
+
+        <p className="disclaimer">
+          Educational information only; not financial advice.
+        </p>
+
+        <p>
+          AI summary unavailable; deterministic metrics still shown.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="dashboard-section ai-panel">
-      <h2>Future AI Summary Panel</h2>
+      <h2>AI Summary Panel</h2>
 
-      <p>
-        This panel will eventually explain backend-calculated metrics in plain
-        English. The AI layer should describe the numbers, not calculate them.
-      </p>
+      <p className="disclaimer">{aiSummary.disclaimer}</p>
 
-      <p>
-        Current summary input could include total value of{" "}
-        <strong>{formatCurrency(analysis.total_portfolio_value)}</strong>, cash
-        percentage of <strong>{analysis.cash_percentage}%</strong>, largest
-        holding <strong>{concentration.largestHoldingName}</strong>, top three
-        concentration of <strong>{concentration.topThreeWeight}%</strong>, and
-        top five concentration of{" "}
-        <strong>{concentration.topFiveWeight}%</strong>.
-      </p>
+      {aiSummary.is_fallback && (
+        <p className="fallback-message">{aiSummary.message}</p>
+      )}
+
+      <div className="ai-summary-grid">
+        <article>
+          <h3>Portfolio Overview</h3>
+          <p>{aiSummary.sections.portfolio_overview}</p>
+        </article>
+
+        <article>
+          <h3>Concentration Observations</h3>
+          <p>{aiSummary.sections.concentration_observations}</p>
+        </article>
+
+        <article>
+          <h3>Allocation Observations</h3>
+          <p>{aiSummary.sections.allocation_observations}</p>
+        </article>
+
+        <article>
+          <h3>Educational Note</h3>
+          <p>{aiSummary.sections.educational_note}</p>
+        </article>
+
+        <article>
+          <h3>Limitations</h3>
+          <p>{aiSummary.sections.limitations}</p>
+        </article>
+      </div>
     </section>
   );
 }
