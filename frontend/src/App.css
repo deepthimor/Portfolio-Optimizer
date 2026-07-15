@@ -398,3 +398,97 @@ td {
   color: #cbd5e1;
   line-height: 1.6;
 }
+
+.dashboard-section,
+form,
+main > section {
+  scroll-margin-top: 24px;
+}
+
+.summary-card {
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.chart-card {
+  min-height: 340px;
+}
+
+.recharts-wrapper {
+  margin: 0 auto;
+}
+
+.recharts-tooltip-label {
+  color: #f9fafb;
+}
+
+.ai-panel {
+  padding-bottom: 32px;
+}
+
+.ai-summary-grid article h3 {
+  text-align: left;
+  font-size: 20px;
+}
+
+.ai-summary-grid article p {
+  text-align: left;
+  margin: 0;
+}
+
+.saved-portfolio-button {
+  line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+  main {
+    width: min(100vw - 20px, 1180px);
+    padding: 28px 0;
+  }
+
+  h1 {
+    font-size: 44px;
+  }
+
+  main > p {
+    font-size: 17px;
+  }
+
+  form,
+  main > section,
+  .dashboard-section {
+    padding: 20px;
+    border-radius: 14px;
+  }
+
+  h2 {
+    font-size: 25px;
+  }
+
+  h3 {
+    font-size: 19px;
+  }
+
+  .summary-card strong {
+    font-size: 21px;
+  }
+
+  .holding-input-row {
+    gap: 8px;
+  }
+
+  .chart-card {
+    min-height: 300px;
+  }
+
+  .disclaimer,
+  .fallback-message,
+  .error,
+  .success,
+  .loading,
+  .empty-state {
+    font-size: 14px;
+  }
+}

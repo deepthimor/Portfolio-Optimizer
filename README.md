@@ -21,11 +21,27 @@ The current MVP focuses on deterministic portfolio calculations. Users enter hol
 
 The project is intentionally structured so future AI features can explain the calculated metrics, while the backend remains responsible for the actual financial calculations.
 
-## Demo Screenshot
+## Dashboard
 
-The current MVP lets users manually enter holdings, submit the portfolio to the FastAPI backend, and view calculated portfolio metrics in the React frontend.
+The current MVP includes a demo-friendly dashboard for entering, analyzing, saving, and explaining portfolios.
 
-![Portfolio Optimizer local app screenshot](docs/screenshots/portfolio-summary-demo.png)
+![Portfolio Optimizer dashboard screenshot](docs/screenshots/top-holdings-dashboard.png)
+
+### Dashboard Features
+
+- Manual holdings input for ticker, quantity, price, asset class, and sector
+- Cash input and cash percentage calculation
+- Total portfolio value and total holdings value
+- Saved portfolio CRUD backed by PostgreSQL
+- Portfolio snapshot support
+- Asset allocation chart
+- Sector exposure chart
+- Top holdings table sorted by weight
+- Top holdings chart
+- Concentration cards for top 1, top 3, and top 5 exposure
+- AI summary panel with portfolio overview, concentration observations, allocation observations, educational note, and limitations
+- Visible disclaimer: educational information only; not financial advice
+- Fallback behavior when AI summary generation is unavailable
 
 ## Current Features
 
@@ -44,10 +60,14 @@ The current MVP lets users manually enter holdings, submit the portfolio to the 
 * Portfolio snapshot creation after analysis
 * Basic unit tests for portfolio calculations
 * Market data collector files for future historical data work
+* Dashboard charts for asset allocation and sector exposure
+* Top 1, top 3, and top 5 concentration metrics
+* AI summary panel based only on backend-calculated metrics
+* AI fallback summary when summary generation is unavailable
+* Visible educational disclaimer that the summary is not financial advice
 
 ## Planned Features
 
-* Dashboard charts
 * Risk metrics
 * Target allocation comparison
 * Rebalancing recommendations
