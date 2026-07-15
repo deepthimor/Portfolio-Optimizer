@@ -1,6 +1,6 @@
 from collections import defaultdict
-
 from backend.schemas.portfolio import PortfolioAnalyzeRequest
+from backend.services.risk_score import calculate_risk_score
 
 
 def round_value(value: float) -> float:
@@ -76,7 +76,7 @@ def analyze_portfolio(request: PortfolioAnalyzeRequest) -> dict:
         key=sector_breakdown.get,
     )
 
-    return {
+    result = {
         "total_portfolio_value": round_value(total_value),
         "total_holdings_value": round_value(holdings_value),
         "cash": round_value(request.cash),
@@ -92,3 +92,7 @@ def analyze_portfolio(request: PortfolioAnalyzeRequest) -> dict:
         "sector_breakdown": sector_breakdown,
         "asset_class_breakdown": asset_class_breakdown,
     }
+
+    result["risk_score"] = calculate_risk_score(result, request)
+
+    return result

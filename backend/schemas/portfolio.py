@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional
+from typing import Any, List, Dict, Optional
 
 
 class HoldingInput(BaseModel):
@@ -13,6 +13,12 @@ class HoldingInput(BaseModel):
 class PortfolioAnalyzeRequest(BaseModel):
     cash: float = Field(default=0, ge=0)
     holdings: List[HoldingInput] = Field(..., min_length=1)
+    risk_tolerance: Optional[str] = "moderate"
+    target_allocation: Optional[Dict[str, float]] = None
+    max_holding: Optional[float] = None
+    max_sector: Optional[float] = None
+    expected_return: Optional[float] = None
+    volatility: Optional[float] = None
 
 
 class HoldingAnalysis(BaseModel):
@@ -49,6 +55,18 @@ class AiSummaryResponse(BaseModel):
     disclaimer: str
 
 
+class RiskScoreResponse(BaseModel):
+    risk_score_v1: float
+    risk_level: str
+    concentration_score: float
+    diversification_score: float
+    sector_exposure_score: float
+    cash_score: float
+    target_allocation_gap_score: float
+    inputs: Dict[str, Any]
+    explanations: List[str]
+
+
 class PortfolioAnalyzeResponse(BaseModel):
     total_portfolio_value: float
     total_holdings_value: float
@@ -64,6 +82,7 @@ class PortfolioAnalyzeResponse(BaseModel):
     top_holdings: List[TopHolding]
     sector_breakdown: Dict[str, float]
     asset_class_breakdown: Dict[str, float]
+    risk_score: RiskScoreResponse
     ai_summary: Optional[AiSummaryResponse] = None
     
 

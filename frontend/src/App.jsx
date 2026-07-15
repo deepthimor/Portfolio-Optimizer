@@ -124,6 +124,34 @@ const sampleAnalysis = {
     technology: 52.7,
     "broad market": 30.83,
   },
+  risk_score: {
+    risk_score_v1: 58.42,
+    risk_level: "moderate",
+    concentration_score: 63.78,
+    diversification_score: 41.87,
+    sector_exposure_score: 100,
+    cash_score: 0,
+    target_allocation_gap_score: 41.77,
+    inputs: {
+      risk_tolerance: "moderate",
+      max_holding: 30,
+      max_sector: 45,
+      cash_threshold: 25,
+      target_allocation: {
+        stock: 60,
+        etf: 30,
+        bond: 10,
+        cash: 0,
+      },
+      expected_return: null,
+      volatility: null,
+    },
+    explanations: [
+      "Risk score v1 is a deterministic weighted score using concentration, sector exposure, cash percentage, and target allocation gaps.",
+      "Concentration score is based on top 1, top 3, and top 5 holding exposure.",
+      "Diversification score is based on number of holdings, number of sectors, and concentration.",
+    ],
+  },
   ai_summary: {
     is_fallback: false,
     message: "AI summary generated from deterministic metrics.",
@@ -482,6 +510,63 @@ function ConcentrationCards({ analysis }) {
   );
 }
 
+function RiskCards({ analysis }) {
+  const risk = analysis.risk_score;
+
+  if (!risk) {
+    return null;
+  }
+
+  return (
+    <section className="dashboard-section">
+      <h2>Risk Score</h2>
+
+      <div className="summary-grid">
+        <article className="summary-card">
+          <span>Risk Score v1</span>
+          <strong>{risk.risk_score_v1}</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Risk Level</span>
+          <strong>{risk.risk_level}</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Concentration Score</span>
+          <strong>{risk.concentration_score}</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Diversification Score</span>
+          <strong>{risk.diversification_score}</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Sector Exposure Score</span>
+          <strong>{risk.sector_exposure_score}</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Cash Score</span>
+          <strong>{risk.cash_score}</strong>
+        </article>
+
+        <article className="summary-card">
+          <span>Target Gap Score</span>
+          <strong>{risk.target_allocation_gap_score}</strong>
+        </article>
+      </div>
+
+      <div className="risk-explanation-list">
+        {risk.explanations.map((explanation) => (
+          <p key={explanation}>{explanation}</p>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function FutureAiSummaryPanel({ analysis }) {
   const aiSummary = analysis.ai_summary;
 
@@ -552,6 +637,7 @@ function Dashboard({ analysis, hasAnalysis }) {
       <TopHoldingsTable topHoldings={dashboardAnalysis.top_holdings} />
       <TopHoldings topHoldings={dashboardAnalysis.top_holdings} />
       <ConcentrationCards analysis={dashboardAnalysis} />
+      <RiskCards analysis={dashboardAnalysis} />
       <FutureAiSummaryPanel analysis={dashboardAnalysis} />
     </>
   );
