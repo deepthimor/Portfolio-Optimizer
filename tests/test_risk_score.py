@@ -119,7 +119,7 @@ def test_concentrated_single_stock_has_high_concentration_score():
 
     assert risk["concentration_score"] >= 80
     assert risk["risk_level"] == "high"
-    
+
 
 def test_high_cash_portfolio_has_high_cash_score():
     request = PortfolioAnalyzeRequest(
@@ -225,3 +225,202 @@ def test_risk_score_has_plain_english_explanations():
 
     assert len(risk["explanations"]) > 0
     assert "deterministic weighted score" in risk["explanations"][0]
+
+def test_valid_target_allocation_returns_gap_analysis():
+    request = PortfolioAnalyzeRequest(
+        cash=0,
+        target_allocation={
+            "stock": 50,
+            "etf": 30,
+            "bond": 20,
+            "cash": 0,
+        },
+        holdings=[
+            HoldingInput(
+                ticker="AAPL",
+                quantity=5,
+                price=100,
+                asset_class="stock",
+                sector="technology",
+            ),
+            HoldingInput(
+                ticker="VTI",
+                quantity=3,
+                price=100,
+                asset_class="etf",
+                sector="broad market",
+            ),
+            HoldingInput(
+                ticker="BND",
+                quantity=2,
+                price=100,
+                asset_class="bond",
+                sector="fixed income",
+            ),
+        ],
+    )
+
+    result = analyze_portfolio(request)
+    gap_analysis = result["risk_score"]["target_allocation_gap_analysis"]
+
+    assert len(gap_analysis) == 4
+    assert gap_analysis[0]["asset_class"] in {"stock", "etf", "bond", "cash"}
+    assert {
+        "asset_class",
+        "current_weight",
+        "target_weight",
+        "difference",
+        "status",
+    } == set(gap_analysis[0].keys())
+
+
+def test_invalid_target_allocation_sum_raises_error():
+    request = PortfolioAnalyzeRequest(
+        cash=0,
+        target_allocation={
+            "stock": 50,
+            "etf": 20,
+            "bond": 10,
+            "cash": 0,
+        },
+        holdings=[
+            HoldingInput(
+                ticker="AAPL",
+                quantity=1,
+                price=100,
+                asset_class="stock",
+                sector="technology",
+            )
+        ],
+    )
+
+    try:
+        analyze_portfolio(request)
+    except ValueError as error:
+        assert "target allocation must sum close to 100%" in str(error)
+    else:
+        raise AssertionError("Expected target allocation sum validation error")
+
+
+def test_negative_target_allocation_raises_error():
+    request = PortfolioAnalyzeRequest(
+        cash=0,
+        target_allocation={
+            "stock": 110,
+            "etf": -10,
+            "cash": 0,
+        },
+        holdings=[
+            HoldingInput(
+                ticker="AAPL",
+                quantity=1,
+                price=100,
+                asset_class="stock",
+                sector="technology",
+            )
+        ],
+    )
+
+    try:
+        analyze_portfolio(request)
+    except ValueError as error:
+        assert "target allocation cannot contain negative values" in str(error)
+    else:
+        raise AssertionError("Expected negative target allocation validation error")
+
+
+def test_unknown_target_asset_class_raises_error():
+    request = PortfolioAnalyzeRequest(
+        cash=0,
+        target_allocation={
+            "stock": 80,
+            "commodities": 20,
+        },
+        holdings=[
+            HoldingInput(
+                ticker="AAPL",
+                quantity=1,
+                price=100,
+                asset_class="stock",
+                sector="technology",
+            )
+        ],
+    )
+
+    try:
+        analyze_portfolio(request)
+    except ValueError as error:
+        assert "unknown target asset class" in str(error)
+    else:
+        raise AssertionError("Expected unknown target asset class validation error")
+
+
+def test_all_cash_case_returns_gap_analysis():
+    request = PortfolioAnalyzeRequest(
+        cash=1000,
+        target_allocation={
+            "cash": 100,
+        },
+        holdings=[
+            HoldingInput(
+                ticker="CASH",
+                quantity=1,
+                price=1,
+                asset_class="cash",
+                sector="cash",
+            )
+        ],
+    )
+
+    result = analyze_portfolio(request)
+    gap_analysis = result["risk_score"]["target_allocation_gap_analysis"]
+
+    assert result["cash_percentage"] > 99
+    assert len(gap_analysis) >= 1
+    assert gap_analysis[0]["status"] in {
+        "overweight",
+        "underweight",
+        "on target",
+    }
+
+
+def test_gap_analysis_is_sorted_by_largest_absolute_gap_first():
+    request = PortfolioAnalyzeRequest(
+        cash=0,
+        target_allocation={
+            "stock": 20,
+            "etf": 60,
+            "bond": 20,
+            "cash": 0,
+        },
+        holdings=[
+            HoldingInput(
+                ticker="AAPL",
+                quantity=8,
+                price=100,
+                asset_class="stock",
+                sector="technology",
+            ),
+            HoldingInput(
+                ticker="VTI",
+                quantity=1,
+                price=100,
+                asset_class="etf",
+                sector="broad market",
+            ),
+            HoldingInput(
+                ticker="BND",
+                quantity=1,
+                price=100,
+                asset_class="bond",
+                sector="fixed income",
+            ),
+        ],
+    )
+
+    result = analyze_portfolio(request)
+    gap_analysis = result["risk_score"]["target_allocation_gap_analysis"]
+
+    gaps = [abs(item["difference"]) for item in gap_analysis]
+
+    assert gaps == sorted(gaps, reverse=True)

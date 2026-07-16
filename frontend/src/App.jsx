@@ -30,8 +30,20 @@ const emptyHolding = {
   sector: "",
 };
 
+const defaultTargetAllocation = {
+  stock: 60,
+  etf: 30,
+  bond: 10,
+  cash: 0,
+};
+
 const samplePortfolio = {
   cash: 2500,
+  target_allocation: {
+    stock: 60,
+    etf: 30,
+    cash: 10,
+  },
   holdings: [
     {
       ticker: "AAPL",
@@ -124,6 +136,10 @@ const sampleAnalysis = {
     technology: 52.7,
     "broad market": 30.83,
   },
+  asset_class_breakdown: {
+    stock: 52.7,
+    etf: 30.83,
+  },
   risk_score: {
     risk_score_v1: 58.42,
     risk_level: "moderate",
@@ -132,6 +148,29 @@ const sampleAnalysis = {
     sector_exposure_score: 100,
     cash_score: 0,
     target_allocation_gap_score: 41.77,
+    target_allocation_gap_analysis: [
+      {
+        asset_class: "stock",
+        current_weight: 52.7,
+        target_weight: 60,
+        difference: -7.3,
+        status: "underweight",
+      },
+      {
+        asset_class: "cash",
+        current_weight: 16.47,
+        target_weight: 10,
+        difference: 6.47,
+        status: "overweight",
+      },
+      {
+        asset_class: "etf",
+        current_weight: 30.83,
+        target_weight: 30,
+        difference: 0.83,
+        status: "on target",
+      },
+    ],
     inputs: {
       risk_tolerance: "moderate",
       max_holding: 30,
@@ -140,8 +179,7 @@ const sampleAnalysis = {
       target_allocation: {
         stock: 60,
         etf: 30,
-        bond: 10,
-        cash: 0,
+        cash: 10,
       },
       expected_return: null,
       volatility: null,
@@ -170,10 +208,6 @@ const sampleAnalysis = {
       risk_flags:
         "High single-holding concentration, High top-three concentration, High top-five concentration",
     },
-  },
-  asset_class_breakdown: {
-    stock: 52.7,
-    etf: 30.83,
   },
 };
 
@@ -206,6 +240,8 @@ function PortfolioForm({
   setPortfolioName,
   cash,
   setCash,
+  targetAllocation,
+  updateTargetAllocation,
   holdings,
   updateHoldingInput,
   addHoldingInput,
@@ -238,6 +274,26 @@ function PortfolioForm({
             onChange={(event) => setCash(event.target.value)}
           />
         </label>
+      </div>
+
+      <h2>Target Allocation</h2>
+
+      <div className="form-grid">
+        {Object.entries(targetAllocation).map(([assetClass, targetWeight]) => (
+          <label key={assetClass}>
+            {assetClass} Target %
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={targetWeight}
+              onChange={(event) =>
+                updateTargetAllocation(assetClass, event.target.value)
+              }
+            />
+          </label>
+        ))}
       </div>
 
       <h2>Holdings Input</h2>
@@ -567,6 +623,44 @@ function RiskCards({ analysis }) {
   );
 }
 
+function TargetGapTable({ analysis }) {
+  const gapAnalysis = analysis.risk_score?.target_allocation_gap_analysis || [];
+
+  if (gapAnalysis.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="dashboard-section">
+      <h2>Target Allocation Gap</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Asset Class</th>
+            <th>Current Weight</th>
+            <th>Target Weight</th>
+            <th>Difference</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {gapAnalysis.map((gap) => (
+            <tr key={gap.asset_class}>
+              <td>{gap.asset_class}</td>
+              <td>{gap.current_weight}%</td>
+              <td>{gap.target_weight}%</td>
+              <td>{gap.difference}%</td>
+              <td>{gap.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
 function FutureAiSummaryPanel({ analysis }) {
   const aiSummary = analysis.ai_summary;
 
@@ -579,9 +673,7 @@ function FutureAiSummaryPanel({ analysis }) {
           Educational information only; not financial advice.
         </p>
 
-        <p>
-          AI summary unavailable; deterministic metrics still shown.
-        </p>
+        <p>AI summary unavailable; deterministic metrics still shown.</p>
       </section>
     );
   }
@@ -638,6 +730,7 @@ function Dashboard({ analysis, hasAnalysis }) {
       <TopHoldings topHoldings={dashboardAnalysis.top_holdings} />
       <ConcentrationCards analysis={dashboardAnalysis} />
       <RiskCards analysis={dashboardAnalysis} />
+      <TargetGapTable analysis={dashboardAnalysis} />
       <FutureAiSummaryPanel analysis={dashboardAnalysis} />
     </>
   );
@@ -782,6 +875,9 @@ function SavedPortfolioDetails({
 function App() {
   const [portfolioName, setPortfolioName] = useState("");
   const [cash, setCash] = useState(0);
+  const [targetAllocation, setTargetAllocation] = useState({
+    ...defaultTargetAllocation,
+  });
   const [holdings, setHoldings] = useState([{ ...emptyHolding }]);
   const [portfolioAnalysis, setPortfolioAnalysis] = useState(null);
 
@@ -826,6 +922,13 @@ function App() {
     setHoldings(nextHoldings);
   }
 
+  function updateTargetAllocation(assetClass, value) {
+    setTargetAllocation({
+      ...targetAllocation,
+      [assetClass]: value,
+    });
+  }
+
   function addHoldingInput() {
     setHoldings([...holdings, { ...emptyHolding }]);
   }
@@ -841,6 +944,12 @@ function App() {
   function buildPortfolioPayload() {
     return {
       cash: Number(cash),
+      target_allocation: Object.fromEntries(
+        Object.entries(targetAllocation).map(([assetClass, targetWeight]) => [
+          assetClass,
+          Number(targetWeight),
+        ]),
+      ),
       holdings: holdings.map((holding) => ({
         ticker: holding.ticker,
         quantity: Number(holding.quantity),
@@ -854,6 +963,7 @@ function App() {
   function loadSamplePortfolio() {
     setPortfolioName("Sample Portfolio");
     setCash(samplePortfolio.cash);
+    setTargetAllocation(samplePortfolio.target_allocation);
     setHoldings(samplePortfolio.holdings);
     setPortfolioAnalysis(null);
     setError("");
@@ -863,6 +973,7 @@ function App() {
   function clearPortfolioForm() {
     setPortfolioName("");
     setCash(0);
+    setTargetAllocation({ ...defaultTargetAllocation });
     setHoldings([{ ...emptyHolding }]);
     setPortfolioAnalysis(null);
     setError("");
@@ -1002,6 +1113,8 @@ function App() {
         setPortfolioName={setPortfolioName}
         cash={cash}
         setCash={setCash}
+        targetAllocation={targetAllocation}
+        updateTargetAllocation={updateTargetAllocation}
         holdings={holdings}
         updateHoldingInput={updateHoldingInput}
         addHoldingInput={addHoldingInput}

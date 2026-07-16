@@ -55,6 +55,14 @@ class AiSummaryResponse(BaseModel):
     disclaimer: str
 
 
+class TargetAllocationGap(BaseModel):
+    asset_class: str
+    current_weight: float
+    target_weight: float
+    difference: float
+    status: str
+
+
 class RiskScoreResponse(BaseModel):
     risk_score_v1: float
     risk_level: str
@@ -63,6 +71,7 @@ class RiskScoreResponse(BaseModel):
     sector_exposure_score: float
     cash_score: float
     target_allocation_gap_score: float
+    target_allocation_gap_analysis: List[TargetAllocationGap]
     inputs: Dict[str, Any]
     explanations: List[str]
 

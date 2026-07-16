@@ -6,6 +6,18 @@ DEFAULT_TARGET_ALLOCATION = {
 }
 
 
+ALLOWED_TARGET_ASSET_CLASSES = {
+    "stock",
+    "etf",
+    "bond",
+    "cash",
+    "crypto",
+    "real estate",
+    "mutual fund",
+    "other",
+}
+
+
 RISK_TOLERANCE_SETTINGS = {
     "conservative": {
         "max_holding": 20.0,
@@ -29,6 +41,31 @@ def round_score(value: float) -> float:
     return round(max(0, min(100, value)), 2)
 
 
+def round_gap(value: float) -> float:
+    return round(value, 2)
+
+
+def validate_target_allocation(target_allocation: dict) -> dict:
+    normalized_target = {
+        key.lower().strip(): float(value)
+        for key, value in target_allocation.items()
+    }
+
+    for asset_class, target_weight in normalized_target.items():
+        if asset_class not in ALLOWED_TARGET_ASSET_CLASSES:
+            raise ValueError(f"unknown target asset class: {asset_class}")
+
+        if target_weight < 0:
+            raise ValueError("target allocation cannot contain negative values")
+
+    total_target = sum(normalized_target.values())
+
+    if abs(total_target - 100.0) > 0.5:
+        raise ValueError("target allocation must sum close to 100%")
+
+    return normalized_target
+
+
 def get_risk_settings(request) -> dict:
     risk_tolerance = (getattr(request, "risk_tolerance", None) or "moderate").lower()
     settings = RISK_TOLERANCE_SETTINGS.get(
@@ -47,9 +84,7 @@ def get_risk_settings(request) -> dict:
         "max_holding": float(max_holding),
         "max_sector": float(max_sector),
         "cash_threshold": float(settings["cash_threshold"]),
-        "target_allocation": {
-            key.lower(): float(value) for key, value in target_allocation.items()
-        },
+        "target_allocation": validate_target_allocation(target_allocation),
         "expected_return": getattr(request, "expected_return", None),
         "volatility": getattr(request, "volatility", None),
     }
@@ -113,27 +148,70 @@ def calculate_cash_score(analysis: dict, cash_threshold: float) -> float:
     )
 
 
-def calculate_target_allocation_gap_score(
-    analysis: dict,
-    target_allocation: dict,
-) -> float:
+def build_current_allocation(analysis: dict) -> dict:
     current_allocation = {
         key.lower(): float(value)
         for key, value in analysis["asset_class_breakdown"].items()
     }
+
     current_allocation["cash"] = float(analysis["cash_percentage"])
 
+    return current_allocation
+
+
+def build_target_allocation_gap_analysis(
+    analysis: dict,
+    target_allocation: dict,
+) -> list[dict]:
+    current_allocation = build_current_allocation(analysis)
     allocation_keys = set(current_allocation.keys()) | set(target_allocation.keys())
 
-    if not allocation_keys:
-        return 0.0
+    gap_analysis = []
 
-    total_gap = sum(
-        abs(current_allocation.get(key, 0.0) - target_allocation.get(key, 0.0))
-        for key in allocation_keys
+    for asset_class in allocation_keys:
+        current_weight = round_gap(current_allocation.get(asset_class, 0.0))
+        target_weight = round_gap(target_allocation.get(asset_class, 0.0))
+        difference = round_gap(current_weight - target_weight)
+
+        if difference > 1:
+            status = "overweight"
+        elif difference < -1:
+            status = "underweight"
+        else:
+            status = "on target"
+
+        gap_analysis.append(
+            {
+                "asset_class": asset_class,
+                "current_weight": current_weight,
+                "target_weight": target_weight,
+                "difference": difference,
+                "status": status,
+            }
+        )
+
+    return sorted(
+        gap_analysis,
+        key=lambda item: abs(item["difference"]),
+        reverse=True,
     )
 
-    average_gap = total_gap / len(allocation_keys)
+
+def calculate_target_allocation_gap_score(
+    analysis: dict,
+    target_allocation: dict,
+) -> float:
+    gap_analysis = build_target_allocation_gap_analysis(
+        analysis,
+        target_allocation,
+    )
+
+    if not gap_analysis:
+        return 0.0
+
+    average_gap = sum(
+        abs(item["difference"]) for item in gap_analysis
+    ) / len(gap_analysis)
 
     return round_score(average_gap * 2)
 
@@ -200,6 +278,11 @@ def calculate_risk_score(analysis: dict, request) -> dict:
         settings["cash_threshold"],
     )
 
+    target_allocation_gap_analysis = build_target_allocation_gap_analysis(
+        analysis,
+        settings["target_allocation"],
+    )
+
     target_allocation_gap_score = calculate_target_allocation_gap_score(
         analysis,
         settings["target_allocation"],
@@ -220,6 +303,7 @@ def calculate_risk_score(analysis: dict, request) -> dict:
         "sector_exposure_score": sector_exposure_score,
         "cash_score": cash_score,
         "target_allocation_gap_score": target_allocation_gap_score,
+        "target_allocation_gap_analysis": target_allocation_gap_analysis,
         "inputs": settings,
     }
 
