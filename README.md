@@ -320,6 +320,107 @@ Full interactive API documentation is available at:
 http://127.0.0.1:8000/docs
 ```
 
+## Backend Deployment Notes
+
+Recommended backend deployment target: Render.
+
+Render is a good fit for this MVP because it supports:
+- Python web services
+- FastAPI deployment
+- Hosted PostgreSQL
+- Environment variable configuration
+- Simple demo deployments from GitHub
+
+### Required Production Environment Variables
+
+```text
+DATABASE_URL=<hosted-postgres-url>
+CORS_ORIGINS=<deployed-frontend-origin>
+```
+
+### Optional Environment Variables
+
+```text
+AI_API_KEY=<not used in current MVP>
+```
+
+The current MVP does not require an AI API key because the AI summary is generated from deterministic backend metrics and fallback text.
+
+### Recommended Production Start Command
+
+```bash
+uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT
+```
+
+### Health Check Endpoint
+
+```text
+GET /health
+```
+
+Expected response:
+
+```json
+{
+  "status": "healthy"
+}
+```
+
+### Production Analyze Endpoint
+
+```text
+POST /api/portfolio/analyze
+```
+
+This endpoint should return:
+- Deterministic portfolio metrics
+- Concentration metrics
+- Risk score
+- Target allocation gap analysis
+- AI summary or fallback section
+
+### Production CORS
+
+Set `CORS_ORIGINS` to the deployed frontend domain.
+
+Example:
+
+```text
+CORS_ORIGINS=https://your-frontend-domain.vercel.app
+```
+
+For multiple origins, use a comma-separated list:
+
+```text
+CORS_ORIGINS=https://your-frontend-domain.vercel.app,http://localhost:5173
+```
+
+Do not include a trailing slash.
+
+### Production Database Setup
+
+If saved portfolios are included in the deployed demo, create a hosted PostgreSQL database and set:
+
+```text
+DATABASE_URL=<hosted-postgres-url>
+```
+
+Then create the database tables:
+
+```bash
+PYTHONPATH=. python scripts/create_tables.py
+```
+
+This project currently uses SQLAlchemy `create_all` for MVP table creation.
+
+### Deployment Log
+
+Deployment errors, fixes, environment variable decisions, and production verification should be documented in:
+
+```text
+docs/deployment-log.md
+```
+
 ### Analyze Portfolio
 
 ```http
@@ -486,4 +587,4 @@ This project is for educational purposes only. It is not financial advice. Do no
 
 ## Status
 
-In Development | Last Updated: June 2026
+In Development | Last Updated: July 2026
