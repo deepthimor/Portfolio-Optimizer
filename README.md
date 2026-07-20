@@ -68,7 +68,7 @@ VITE_API_BASE_URL=https://portfolio-optimizer-033l.onrender.com
 After the frontend is deployed, add the live frontend link here:
 
 ```text
-https://your-vercel-link.vercel.app
+https://portfolio-optimizer-theta.vercel.app
 ```
 
 ## Known Limitations
