@@ -43,6 +43,44 @@ The current MVP includes a demo-friendly dashboard for entering, analyzing, savi
 - Visible disclaimer: educational information only; not financial advice
 - Fallback behavior when AI summary generation is unavailable
 
+## Live Demo
+
+Live backend API:
+
+```text
+https://portfolio-optimizer-033l.onrender.com
+```
+
+Production health check:
+
+```text
+https://portfolio-optimizer-033l.onrender.com/health
+```
+
+Frontend deployment target: Vercel.
+
+The frontend uses this production environment variable:
+
+```text
+VITE_API_BASE_URL=https://portfolio-optimizer-033l.onrender.com
+```
+
+After the frontend is deployed, add the live frontend link here:
+
+```text
+https://your-vercel-link.vercel.app
+```
+
+## Known Limitations
+
+- Educational information only; not financial advice
+- No brokerage integration
+- Manual portfolio input only
+- Simple deterministic risk model
+- No authentication yet
+- Does not verify whether ticker symbols are valid securities
+- Does not include taxes, fees, historical performance, valuation, or user-specific financial goals
+
 ## Current Features
 
 * Manual holdings input for ticker, quantity, price, asset class, and sector
