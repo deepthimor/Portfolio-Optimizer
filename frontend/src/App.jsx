@@ -190,6 +190,22 @@ const sampleAnalysis = {
       "Diversification score is based on number of holdings, number of sectors, and concentration.",
     ],
   },
+  optimizer: {
+    recommendations: [
+      {
+        action: "no_action",
+        ticker: null,
+        amount_or_percent: 0,
+        reason_code: "BALANCED_NO_ACTION",
+        human_reason:
+          "Optimizer recommendation logic is initialized. Future versions will add deterministic portfolio review signals.",
+        before_weight: null,
+        after_weight_estimate: null,
+        priority: "low",
+      },
+    ],
+    disclaimer: "Educational information only; not financial advice.",
+  },
   ai_summary: {
     is_fallback: false,
     message: "AI summary generated from deterministic metrics.",
@@ -718,6 +734,35 @@ function FutureAiSummaryPanel({ analysis }) {
   );
 }
 
+function OptimizerPanel({ analysis }) {
+  const optimizer = analysis.optimizer;
+
+  return (
+    <section className="dashboard-section">
+      <h2>Optimizer Panel</h2>
+
+      <p className="disclaimer">
+        {optimizer?.disclaimer || "Educational information only; not financial advice."}
+      </p>
+
+      {!optimizer?.recommendations?.length ? (
+        <p>No optimizer recommendations available yet.</p>
+      ) : (
+        <div className="risk-explanation-list">
+          {optimizer.recommendations.map((recommendation, index) => (
+            <article key={`${recommendation.reason_code}-${index}`} className="summary-card">
+              <span>{recommendation.reason_code}</span>
+              <strong>{recommendation.action}</strong>
+              <p>{recommendation.human_reason}</p>
+              <p>Priority: {recommendation.priority}</p>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function Dashboard({ analysis, hasAnalysis }) {
   const dashboardAnalysis = analysis || sampleAnalysis;
   const isSample = !hasAnalysis;
@@ -731,6 +776,7 @@ function Dashboard({ analysis, hasAnalysis }) {
       <ConcentrationCards analysis={dashboardAnalysis} />
       <RiskCards analysis={dashboardAnalysis} />
       <TargetGapTable analysis={dashboardAnalysis} />
+      <OptimizerPanel analysis={dashboardAnalysis} />
       <FutureAiSummaryPanel analysis={dashboardAnalysis} />
     </>
   );

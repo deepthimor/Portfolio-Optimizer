@@ -17,7 +17,7 @@ https://portfolio-optimizer-033l.onrender.com/health
 Frontend:
 
 ```text
-<your-vercel-frontend-url>
+https://portfolio-optimizer-theta.vercel.app
 ```
 
 ## Deployment Setup
