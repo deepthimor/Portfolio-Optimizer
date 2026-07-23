@@ -1,7 +1,7 @@
 from collections import defaultdict
 from backend.schemas.portfolio import PortfolioAnalyzeRequest
 from backend.services.risk_score import calculate_risk_score
-
+from backend.services.optimizer import build_optimizer_recommendations
 
 def round_value(value: float) -> float:
     return round(value, 2)
@@ -94,5 +94,5 @@ def analyze_portfolio(request: PortfolioAnalyzeRequest) -> dict:
     }
 
     result["risk_score"] = calculate_risk_score(result, request)
-
+    result["optimizer"] = build_optimizer_recommendations(result)
     return result

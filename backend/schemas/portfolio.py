@@ -75,6 +75,21 @@ class RiskScoreResponse(BaseModel):
     inputs: Dict[str, Any]
     explanations: List[str]
 
+class OptimizerRecommendation(BaseModel):
+    action: str
+    ticker: Optional[str] = None
+    amount_or_percent: Optional[float] = None
+    reason_code: str
+    human_reason: str
+    before_weight: Optional[float] = None
+    after_weight_estimate: Optional[float] = None
+    priority: str
+
+
+class OptimizerResponse(BaseModel):
+    recommendations: List[OptimizerRecommendation]
+    disclaimer: str
+
 
 class PortfolioAnalyzeResponse(BaseModel):
     total_portfolio_value: float
@@ -92,6 +107,7 @@ class PortfolioAnalyzeResponse(BaseModel):
     sector_breakdown: Dict[str, float]
     asset_class_breakdown: Dict[str, float]
     risk_score: RiskScoreResponse
+    optimizer: OptimizerResponse
     ai_summary: Optional[AiSummaryResponse] = None
     
 
