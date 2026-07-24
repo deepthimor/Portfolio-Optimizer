@@ -736,6 +736,43 @@ function FutureAiSummaryPanel({ analysis }) {
 
 function OptimizerPanel({ analysis }) {
   const optimizer = analysis.optimizer;
+  const recommendations = optimizer?.recommendations || [];
+
+  const sellTrimRecommendations = recommendations.filter((recommendation) =>
+    ["reduce_exposure", "review"].includes(recommendation.action) &&
+    ["OVERWEIGHT_HOLDING", "OVERWEIGHT_SECTOR"].includes(recommendation.reason_code)
+  );
+
+  const buyReallocateRecommendations = recommendations.filter(
+    (recommendation) => recommendation.action === "add_exposure",
+  );
+
+  const holdRecommendations = recommendations.filter(
+    (recommendation) =>
+      recommendation.action === "no_action" ||
+      recommendation.reason_code === "BELOW_CASH_TARGET",
+  );
+
+  function renderRecommendationGroup(title, groupedRecommendations) {
+    return (
+      <article className="summary-card">
+        <h3>{title}</h3>
+
+        {groupedRecommendations.length === 0 ? (
+          <p>No recommendations in this group.</p>
+        ) : (
+          groupedRecommendations.map((recommendation, index) => (
+            <div key={`${recommendation.reason_code}-${index}`}>
+              <strong>{recommendation.reason_code}</strong>
+              <p>{recommendation.human_reason}</p>
+              <p>Action: {recommendation.action}</p>
+              <p>Priority: {recommendation.priority}</p>
+            </div>
+          ))
+        )}
+      </article>
+    );
+  }
 
   return (
     <section className="dashboard-section">
@@ -745,20 +782,11 @@ function OptimizerPanel({ analysis }) {
         {optimizer?.disclaimer || "Educational information only; not financial advice."}
       </p>
 
-      {!optimizer?.recommendations?.length ? (
-        <p>No optimizer recommendations available yet.</p>
-      ) : (
-        <div className="risk-explanation-list">
-          {optimizer.recommendations.map((recommendation, index) => (
-            <article key={`${recommendation.reason_code}-${index}`} className="summary-card">
-              <span>{recommendation.reason_code}</span>
-              <strong>{recommendation.action}</strong>
-              <p>{recommendation.human_reason}</p>
-              <p>Priority: {recommendation.priority}</p>
-            </article>
-          ))}
-        </div>
-      )}
+      <div className="summary-grid">
+        {renderRecommendationGroup("Sell / Trim", sellTrimRecommendations)}
+        {renderRecommendationGroup("Buy / Reallocate", buyReallocateRecommendations)}
+        {renderRecommendationGroup("Hold / No Action", holdRecommendations)}
+      </div>
     </section>
   );
 }
