@@ -91,6 +91,22 @@ class OptimizerResponse(BaseModel):
     disclaimer: str
 
 
+class OptimizerExplanationSummary(BaseModel):
+    reason_code: str
+    summary: str
+
+
+class OptimizerExplanationResponse(BaseModel):
+    is_fallback: bool
+    message: str
+    prompt_rules: str
+    overview: str
+    reason_codes: List[str]
+    recommendation_summaries: List[OptimizerExplanationSummary]
+    limitations: str
+    disclaimer: str
+
+
 class PortfolioAnalyzeResponse(BaseModel):
     total_portfolio_value: float
     total_holdings_value: float
@@ -108,6 +124,7 @@ class PortfolioAnalyzeResponse(BaseModel):
     asset_class_breakdown: Dict[str, float]
     risk_score: RiskScoreResponse
     optimizer: OptimizerResponse
+    optimizer_explanation: OptimizerExplanationResponse
     ai_summary: Optional[AiSummaryResponse] = None
     
 

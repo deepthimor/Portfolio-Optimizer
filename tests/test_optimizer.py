@@ -506,3 +506,42 @@ def test_build_optimizer_recommendations_is_pure_for_same_input():
     second = build_optimizer_recommendations(result)
 
     assert first == second
+
+def test_optimizer_explanation_is_generated_after_recommendations():
+    result = analyze_case(OVERWEIGHT_STOCK_PORTFOLIO)
+
+    assert "optimizer" in result
+    assert "optimizer_explanation" in result
+    assert result["optimizer"]["recommendations"]
+    assert result["optimizer_explanation"]["reason_codes"]
+
+
+def test_optimizer_explanation_cites_reason_codes():
+    result = analyze_case(OVERWEIGHT_STOCK_PORTFOLIO)
+
+    optimizer_reason_codes = {
+        recommendation["reason_code"]
+        for recommendation in result["optimizer"]["recommendations"]
+    }
+
+    explanation_reason_codes = set(result["optimizer_explanation"]["reason_codes"])
+
+    assert optimizer_reason_codes.issubset(explanation_reason_codes)
+
+
+def test_optimizer_explanation_includes_limitations_and_disclaimer():
+    result = analyze_case(OVERWEIGHT_STOCK_PORTFOLIO)
+    explanation = result["optimizer_explanation"]
+
+    assert "limitations" in explanation
+    assert "disclaimer" in explanation
+    assert "Educational information only" in explanation["disclaimer"]
+
+
+def test_optimizer_explanation_prompt_rules_have_ai_boundaries():
+    result = analyze_case(OVERWEIGHT_STOCK_PORTFOLIO)
+    prompt_rules = result["optimizer_explanation"]["prompt_rules"]
+
+    assert "Only explain recommendations already produced" in prompt_rules
+    assert "Do not invent expected returns" in prompt_rules
+    assert "Do not recommend buying or selling anything beyond" in prompt_rules

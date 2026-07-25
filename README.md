@@ -115,6 +115,77 @@ https://portfolio-optimizer-theta.vercel.app
 * Backtesting engine
 * Deployment
 
+## Optimizer v1
+
+The optimizer is a deterministic portfolio review engine that generates structured recommendations from backend-calculated portfolio metrics.
+
+It currently supports:
+
+- Overweight holding detection
+- Overweight sector detection
+- Underweight asset class detection
+- Cash requirement checks
+- Balanced / no-action behavior
+- Recommendation priority
+- Reason-coded recommendation output
+- Educational optimizer explanations
+
+### Recommendation Output
+
+Example recommendation:
+
+```json
+{
+  "action": "reduce_exposure",
+  "ticker": "AAPL",
+  "amount_or_percent": 40.0,
+  "reason_code": "OVERWEIGHT_HOLDING",
+  "human_reason": "AAPL is 70.0% of the portfolio, which is above the max holding threshold of 30.0%.",
+  "before_weight": 70.0,
+  "after_weight_estimate": 30.0,
+  "priority": "high"
+}
+```
+
+### Reason Codes
+
+The optimizer currently supports:
+
+- `OVERWEIGHT_HOLDING`
+- `OVERWEIGHT_SECTOR`
+- `BELOW_CASH_TARGET`
+- `UNDERWEIGHT_ASSET_CLASS`
+- `BALANCED_NO_ACTION`
+
+### AI Explanation Boundary
+
+The optimizer explanation layer only explains deterministic backend recommendations after they have already been generated.
+
+It does not:
+
+- Invent expected returns
+- Forecast future prices
+- Recommend securities outside the deterministic optimizer output
+- Replace professional financial advice
+- Use live brokerage or market data
+
+All optimizer output is educational only and not financial advice.
+
+### Runtime Complexity
+
+The optimizer runs in:
+
+```text
+O(h + s + g + r log r)
+```
+
+Where:
+
+- `h` = number of holdings
+- `s` = number of sectors
+- `g` = number of target allocation gap rows
+- `r` = number of recommendations
+
 ## Tech Stack
 
 **Backend**

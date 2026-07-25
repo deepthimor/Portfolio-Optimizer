@@ -206,6 +206,25 @@ const sampleAnalysis = {
     ],
     disclaimer: "Educational information only; not financial advice.",
   },
+  optimizer_explanation: {
+    is_fallback: false,
+    message: "Optimizer explanation generated from deterministic recommendations.",
+    prompt_rules:
+      "Only explain backend-generated optimizer recommendations. Cite reason codes. Do not invent returns or new recommendations.",
+    overview:
+      "The optimizer explanation is based only on deterministic backend recommendations that were already generated.",
+    reason_codes: ["BALANCED_NO_ACTION"],
+    recommendation_summaries: [
+      {
+        reason_code: "BALANCED_NO_ACTION",
+        summary:
+          "BALANCED_NO_ACTION: The optimizer did not detect a major overweight holding, overweight sector, or underweight asset class signal.",
+      },
+    ],
+    limitations:
+      "This explanation is limited to user-provided holdings and deterministic portfolio metrics. It does not use live market data, tax impact, transaction costs, or personal financial goals.",
+    disclaimer: "Educational information only; not financial advice.",
+  },
   ai_summary: {
     is_fallback: false,
     message: "AI summary generated from deterministic metrics.",
@@ -791,6 +810,44 @@ function OptimizerPanel({ analysis }) {
   );
 }
 
+function OptimizerExplanationPanel({ analysis }) {
+  const explanation = analysis.optimizer_explanation;
+
+  if (!explanation) {
+    return (
+      <section className="dashboard-section">
+        <h2>Optimizer Explanation</h2>
+        <p>Optimizer explanation unavailable. Deterministic recommendations are still shown.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="dashboard-section">
+      <h2>Optimizer Explanation</h2>
+
+      <p className="disclaimer">{explanation.disclaimer}</p>
+      <p>{explanation.overview}</p>
+
+      {explanation.is_fallback && (
+        <p className="fallback-message">{explanation.message}</p>
+      )}
+
+      <div className="risk-explanation-list">
+        {explanation.recommendation_summaries.map((item) => (
+          <article key={item.reason_code} className="summary-card">
+            <strong>{item.reason_code}</strong>
+            <p>{item.summary}</p>
+          </article>
+        ))}
+      </div>
+
+      <h3>Limitations</h3>
+      <p>{explanation.limitations}</p>
+    </section>
+  );
+}
+
 function Dashboard({ analysis, hasAnalysis }) {
   const dashboardAnalysis = analysis || sampleAnalysis;
   const isSample = !hasAnalysis;
@@ -805,6 +862,7 @@ function Dashboard({ analysis, hasAnalysis }) {
       <RiskCards analysis={dashboardAnalysis} />
       <TargetGapTable analysis={dashboardAnalysis} />
       <OptimizerPanel analysis={dashboardAnalysis} />
+      <OptimizerExplanationPanel analysis={dashboardAnalysis} />
       <FutureAiSummaryPanel analysis={dashboardAnalysis} />
     </>
   );
