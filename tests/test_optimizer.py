@@ -3,6 +3,17 @@ import pytest
 from backend.schemas.portfolio import PortfolioAnalyzeRequest
 from backend.services.portfolio_analysis import analyze_portfolio
 
+from pydantic import ValidationError
+
+from backend.services.optimizer import build_optimizer_recommendations
+from tests.fixtures.optimizer_cases import (
+    ALL_CASH_PORTFOLIO,
+    BALANCED_PORTFOLIO,
+    OVERWEIGHT_SECTOR_PORTFOLIO,
+    OVERWEIGHT_STOCK_PORTFOLIO,
+    TINY_PORTFOLIO,
+    UNDERWEIGHT_BONDS_PORTFOLIO,
+)
 
 def test_single_overweight_stock_creates_trim_recommendation():
     request = PortfolioAnalyzeRequest(
@@ -336,3 +347,162 @@ def test_tiny_portfolio_still_returns_structured_recommendations():
     assert "recommendations" in optimizer
     assert "disclaimer" in optimizer
     assert len(optimizer["recommendations"]) >= 1
+
+def analyze_case(case: dict) -> dict:
+    return analyze_portfolio(PortfolioAnalyzeRequest(**case))
+
+
+def get_reason_codes(result: dict) -> set[str]:
+    return {
+        recommendation["reason_code"]
+        for recommendation in result["optimizer"]["recommendations"]
+    }
+
+
+def test_overweight_stock_fixture_generates_holding_recommendation():
+    result = analyze_case(OVERWEIGHT_STOCK_PORTFOLIO)
+
+    assert "OVERWEIGHT_HOLDING" in get_reason_codes(result)
+
+
+def test_overweight_sector_fixture_generates_sector_recommendation():
+    result = analyze_case(OVERWEIGHT_SECTOR_PORTFOLIO)
+
+    assert "OVERWEIGHT_SECTOR" in get_reason_codes(result)
+
+
+def test_all_cash_portfolio_does_not_generate_stock_trim_recommendation():
+    result = analyze_case(ALL_CASH_PORTFOLIO)
+
+    assert "OVERWEIGHT_HOLDING" not in get_reason_codes(result)
+    assert "OVERWEIGHT_SECTOR" not in get_reason_codes(result)
+
+
+def test_balanced_portfolio_returns_balanced_no_action_from_fixture():
+    result = analyze_case(BALANCED_PORTFOLIO)
+
+    assert result["optimizer"]["recommendations"][0]["reason_code"] == "BALANCED_NO_ACTION"
+
+
+def test_invalid_target_allocation_has_clear_error_message():
+    request = PortfolioAnalyzeRequest(
+        cash=0,
+        target_allocation={"stock": 70, "bond": 70},
+        holdings=[
+            {
+                "ticker": "AAPL",
+                "quantity": 1,
+                "price": 100,
+                "asset_class": "stock",
+                "sector": "technology",
+            }
+        ],
+    )
+
+    with pytest.raises(ValueError, match="target allocation must sum close to 100%"):
+        analyze_portfolio(request)
+
+
+def test_unknown_target_asset_class_has_clear_error_message():
+    request = PortfolioAnalyzeRequest(
+        cash=0,
+        target_allocation={"magic": 100},
+        holdings=[
+            {
+                "ticker": "AAPL",
+                "quantity": 1,
+                "price": 100,
+                "asset_class": "stock",
+                "sector": "technology",
+            }
+        ],
+    )
+
+    with pytest.raises(ValueError, match="unknown target asset class"):
+        analyze_portfolio(request)
+
+
+def test_tiny_portfolio_returns_structured_optimizer_output():
+    result = analyze_case(TINY_PORTFOLIO)
+    optimizer = result["optimizer"]
+
+    assert "recommendations" in optimizer
+    assert "disclaimer" in optimizer
+    assert len(optimizer["recommendations"]) >= 1
+
+
+def test_duplicate_ticker_rows_are_supported_for_optimizer():
+    request = PortfolioAnalyzeRequest(
+        cash=0,
+        max_holding=80,
+        max_sector=100,
+        target_allocation={"stock": 100, "cash": 0},
+        holdings=[
+            {
+                "ticker": "AAPL",
+                "quantity": 1,
+                "price": 100,
+                "asset_class": "stock",
+                "sector": "technology",
+            },
+            {
+                "ticker": "AAPL",
+                "quantity": 2,
+                "price": 100,
+                "asset_class": "stock",
+                "sector": "technology",
+            },
+        ],
+    )
+
+    result = analyze_portfolio(request)
+
+    assert len(result["holdings"]) == 2
+    assert "optimizer" in result
+
+
+def test_zero_value_holding_is_rejected_for_optimizer():
+    with pytest.raises(ValidationError):
+        PortfolioAnalyzeRequest(
+            cash=100,
+            holdings=[
+                {
+                    "ticker": "ZERO",
+                    "quantity": 0,
+                    "price": 100,
+                    "asset_class": "stock",
+                    "sector": "technology",
+                }
+            ],
+        )
+
+
+def test_underweight_bond_fixture_generates_buy_reallocate_recommendation():
+    result = analyze_case(UNDERWEIGHT_BONDS_PORTFOLIO)
+
+    assert "UNDERWEIGHT_ASSET_CLASS" in get_reason_codes(result)
+
+
+def test_optimizer_recommendation_shape_is_stable():
+    result = analyze_case(OVERWEIGHT_STOCK_PORTFOLIO)
+    recommendation = result["optimizer"]["recommendations"][0]
+
+    assert set(recommendation.keys()) == {
+        "action",
+        "ticker",
+        "amount_or_percent",
+        "reason_code",
+        "human_reason",
+        "before_weight",
+        "after_weight_estimate",
+        "priority",
+    }
+
+
+def test_build_optimizer_recommendations_is_pure_for_same_input():
+    result = analyze_case(OVERWEIGHT_STOCK_PORTFOLIO)
+
+    first = build_optimizer_recommendations(result)
+    second = build_optimizer_recommendations(result)
+
+    assert first == second
