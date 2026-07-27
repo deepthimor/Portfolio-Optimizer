@@ -166,3 +166,33 @@ class HoldingRecordResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ScenarioHoldingImpact(BaseModel):
+    ticker: str
+    starting_value: float
+    scenario_value: float
+    dollar_change: float
+    percent_change: float
+    applied_assumption: str
+
+
+class ScenarioResult(BaseModel):
+    scenario_name: str
+    starting_value: float
+    scenario_value: float
+    dollar_change: float
+    percent_change: float
+    most_impacted_holdings: List[ScenarioHoldingImpact]
+    assumptions: List[str]
+
+
+class ReportRequest(BaseModel):
+    cash: float = Field(default=0, ge=0)
+    holdings: List[HoldingInput] = Field(..., min_length=1)
+    scenarios: Optional[List[str]] = None
+
+
+class ReportResult(BaseModel):
+    starting_value: float
+    results: List[ScenarioResult]
+    disclaimer: str

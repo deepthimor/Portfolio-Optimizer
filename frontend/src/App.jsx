@@ -848,6 +848,25 @@ function OptimizerExplanationPanel({ analysis }) {
   );
 }
 
+function ScenarioReportPlaceholder() {
+  return (
+    <section className="dashboard-section">
+      <h2>Scenario Report</h2>
+      <p className="disclaimer">
+        Educational information only; scenario reports are not forecasts.
+      </p>
+      <button type="button">
+        Generate Scenario Report
+      </button>
+      <p>
+        Scenario report generation will use deterministic stress-test assumptions
+        such as market down, tech down, rates up, cash return, international
+        underperformance, and concentrated holding drop.
+      </p>
+    </section>
+  );
+}
+
 function Dashboard({ analysis, hasAnalysis }) {
   const dashboardAnalysis = analysis || sampleAnalysis;
   const isSample = !hasAnalysis;
@@ -863,6 +882,7 @@ function Dashboard({ analysis, hasAnalysis }) {
       <TargetGapTable analysis={dashboardAnalysis} />
       <OptimizerPanel analysis={dashboardAnalysis} />
       <OptimizerExplanationPanel analysis={dashboardAnalysis} />
+      <ScenarioReportPlaceholder />
       <FutureAiSummaryPanel analysis={dashboardAnalysis} />
     </>
   );
