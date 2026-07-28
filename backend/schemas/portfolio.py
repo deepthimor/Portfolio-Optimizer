@@ -196,3 +196,22 @@ class ReportResult(BaseModel):
     starting_value: float
     results: List[ScenarioResult]
     disclaimer: str
+
+class ReportJobCreateRequest(ReportRequest):
+    portfolio_id: Optional[int] = None
+
+
+class ReportJobCreateResponse(BaseModel):
+    job_id: int
+    status: str
+
+
+class ReportJobStatusResponse(BaseModel):
+    job_id: int
+    portfolio_id: Optional[int] = None
+    status: str
+    request_json: Dict[str, Any]
+    result_json: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None

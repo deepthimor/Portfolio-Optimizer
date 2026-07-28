@@ -9,8 +9,7 @@ os.environ["DATABASE_URL"] = "sqlite:///./test_portfolio.db"
 
 from backend.api.main import app
 from backend.database import Base, get_db
-from backend.models import PortfolioRecord, HoldingRecord, PortfolioSnapshot
-
+from backend.models import PortfolioRecord, HoldingRecord, PortfolioSnapshot, ReportJob
 
 TEST_DATABASE_URL = "sqlite:///./test_portfolio.db"
 

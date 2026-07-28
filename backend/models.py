@@ -1,5 +1,6 @@
 from datetime import datetime
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
+
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, JSON, String
 from sqlalchemy.orm import relationship
 
 from backend.database import Base
@@ -50,3 +51,19 @@ class PortfolioSnapshot(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     portfolio = relationship("PortfolioRecord", back_populates="snapshots")
+
+class ReportJob(Base):
+    __tablename__ = "report_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    portfolio_id = Column(Integer, ForeignKey("portfolio_records.id"), nullable=True)
+    status = Column(String(50), nullable=False, default="pending")
+    request_json = Column(JSON, nullable=False)
+    result_json = Column(JSON, nullable=True)
+    error_message = Column(String(1000), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )

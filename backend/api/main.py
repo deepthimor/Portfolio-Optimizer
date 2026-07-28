@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes.portfolio import router as portfolio_router
+from backend.api.routes.reports import router as reports_router
 
 
 def get_cors_origins() -> list[str]:
@@ -43,6 +44,7 @@ app.add_middleware(
 )
 
 app.include_router(portfolio_router)
+app.include_router(reports_router)
 
 
 @app.get("/")
