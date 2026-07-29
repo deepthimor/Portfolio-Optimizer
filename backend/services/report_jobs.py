@@ -1,6 +1,5 @@
 from backend.models import ReportJob
-from backend.schemas.portfolio import ReportJobCreateRequest, ReportRequest
-from backend.services.scenario_report import build_scenario_report
+from backend.schemas.portfolio import ReportJobCreateRequest
 
 
 def serialize_report_job(job: ReportJob) -> dict:
@@ -17,38 +16,15 @@ def serialize_report_job(job: ReportJob) -> dict:
 
 
 def create_report_job(db, request: ReportJobCreateRequest) -> ReportJob:
-    request_json = request.model_dump()
-
     job = ReportJob(
         portfolio_id=request.portfolio_id,
         status="pending",
-        request_json=request_json,
+        request_json=request.model_dump(),
         result_json=None,
         error_message=None,
     )
 
     db.add(job)
-    db.commit()
-    db.refresh(job)
-
-    try:
-        report_request = ReportRequest(
-            cash=request.cash,
-            holdings=request.holdings,
-            scenarios=request.scenarios,
-        )
-
-        result = build_scenario_report(report_request)
-
-        job.status = "completed"
-        job.result_json = result
-        job.error_message = None
-
-    except Exception as error:
-        job.status = "failed"
-        job.result_json = None
-        job.error_message = str(error)
-
     db.commit()
     db.refresh(job)
 
