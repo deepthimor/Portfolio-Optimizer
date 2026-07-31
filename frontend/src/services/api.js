@@ -52,3 +52,13 @@ export async function deleteHolding(holdingId) {
   );
   return response.data;
 }
+
+export async function createReportJob(payload) {
+  const response = await api.post("/api/reports", payload);
+  return response.data;
+}
+
+export async function getReportJob(jobId) {
+  const response = await api.get(`/api/reports/${jobId}`);
+  return response.data;
+}

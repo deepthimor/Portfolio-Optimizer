@@ -14,9 +14,11 @@ import {
 import {
   analyzePortfolio,
   createPortfolio,
+  createReportJob,
   deleteHolding,
   deletePortfolio,
   getPortfolio,
+  getReportJob,
   listPortfolios,
   updatePortfolio,
 } from "./services/api";
@@ -848,21 +850,255 @@ function OptimizerExplanationPanel({ analysis }) {
   );
 }
 
-function ScenarioReportPlaceholder() {
+function getVisibleReportStatus(status) {
+  if (status === "running") {
+    return "processing";
+  }
+
+  if (status === "completed") {
+    return "complete";
+  }
+
+  return status || "not started";
+}
+
+function buildReportPayloadFromAnalysis(analysis) {
+  return {
+    cash: analysis.cash || 0,
+    scenarios: [
+      "market_down_25",
+      "tech_down_40",
+      "rates_up",
+      "cash_return",
+      "international_underperformance",
+      "concentrated_holding_drop",
+    ],
+    holdings: (analysis.holdings || []).map((holding) => ({
+      ticker: holding.ticker,
+      quantity: holding.quantity,
+      price: holding.price,
+      asset_class: holding.asset_class,
+      sector: holding.sector,
+    })),
+  };
+}
+
+function buildDeterministicAiReportSummary(reportJob) {
+  const results = reportJob?.result_json?.results || [];
+
+  if (results.length === 0) {
+    return "AI report summary will appear after the deterministic scenario report is complete.";
+  }
+
+  const worstScenario = [...results].sort(
+    (firstResult, secondResult) =>
+      firstResult.percent_change - secondResult.percent_change,
+  )[0];
+
+  const bestScenario = [...results].sort(
+    (firstResult, secondResult) =>
+      secondResult.percent_change - firstResult.percent_change,
+  )[0];
+
+  return (
+    `Based only on deterministic scenario outputs, the largest downside case is ` +
+    `${worstScenario.scenario_name}, with an estimated portfolio impact of ` +
+    `${worstScenario.percent_change}%. The most resilient scenario is ` +
+    `${bestScenario.scenario_name}, with an estimated impact of ` +
+    `${bestScenario.percent_change}%. This summary explains scenario math only ` +
+    `and does not predict future performance.`
+  );
+}
+
+function ScenarioReportPanel({ analysis }) {
+  const [reportJob, setReportJob] = useState(null);
+  const [isCreatingReport, setIsCreatingReport] = useState(false);
+  const [reportError, setReportError] = useState("");
+
+  const visibleStatus = getVisibleReportStatus(reportJob?.status);
+  const isTerminalStatus = ["completed", "failed"].includes(reportJob?.status);
+
+  async function handleGenerateReport() {
+    setIsCreatingReport(true);
+    setReportError("");
+
+    try {
+      const payload = buildReportPayloadFromAnalysis(analysis);
+      const createdJob = await createReportJob(payload);
+      setReportJob(createdJob);
+    } catch (error) {
+      setReportError("Could not create scenario report job. Please try again.");
+    } finally {
+      setIsCreatingReport(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!reportJob?.job_id || isTerminalStatus) {
+      return undefined;
+    }
+
+    const pollInterval = window.setInterval(async () => {
+      try {
+        const updatedJob = await getReportJob(reportJob.job_id);
+        setReportJob(updatedJob);
+      } catch (error) {
+        setReportError("Could not refresh scenario report status.");
+        window.clearInterval(pollInterval);
+      }
+    }, 3000);
+
+    return () => window.clearInterval(pollInterval);
+  }, [reportJob?.job_id, isTerminalStatus]);
+
+  const reportResults = reportJob?.result_json?.results || [];
+  const allImpactedHoldings = reportResults
+    .flatMap((result) =>
+      (result.most_impacted_holdings || []).map((holding) => ({
+        ...holding,
+        scenario_name: result.scenario_name,
+      })),
+    )
+    .sort(
+      (firstHolding, secondHolding) =>
+        Math.abs(secondHolding.dollar_change) -
+        Math.abs(firstHolding.dollar_change),
+    )
+    .slice(0, 5);
+
   return (
     <section className="dashboard-section">
       <h2>Scenario Report</h2>
+
       <p className="disclaimer">
-        Educational information only; scenario reports are not forecasts.
+        Educational scenario only; not a prediction or financial advice.
       </p>
-      <button type="button">
-        Generate Scenario Report
+
+      <button
+        type="button"
+        onClick={handleGenerateReport}
+        disabled={isCreatingReport}
+      >
+        {isCreatingReport ? "Creating Report..." : "Generate Scenario Report"}
       </button>
-      <p>
-        Scenario report generation will use deterministic stress-test assumptions
-        such as market down, tech down, rates up, cash return, international
-        underperformance, and concentrated holding drop.
-      </p>
+
+      <div className="summary-grid">
+        <article className="summary-card">
+          <span>Report Status</span>
+          <strong>{visibleStatus}</strong>
+        </article>
+
+        {reportJob?.job_id && (
+          <article className="summary-card">
+            <span>Report Job ID</span>
+            <strong>{reportJob.job_id}</strong>
+          </article>
+        )}
+      </div>
+
+      {reportJob?.status === "pending" && (
+        <p>
+          Report job created and waiting for the worker. Run{" "}
+          <code>PYTHONPATH=. python scripts/run_worker.py</code> locally to process it.
+        </p>
+      )}
+
+      {reportJob?.status === "running" && (
+        <p>Report is processing. Status will refresh automatically.</p>
+      )}
+
+      {reportJob?.status === "failed" && (
+        <div className="summary-card">
+          <h3>Report Failed</h3>
+          <p>{reportJob.error_message || "The report could not be generated."}</p>
+          <button type="button" onClick={handleGenerateReport}>
+            Retry Report
+          </button>
+        </div>
+      )}
+
+      {reportJob?.status === "completed" && (
+        <>
+          <article className="summary-card">
+            <h3>Educational Explanation</h3>
+            <p>{buildDeterministicAiReportSummary(reportJob)}</p>
+          </article>
+
+          <article className="summary-card">
+            <h3>Portfolio Impact</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Scenario</th>
+                  <th>Starting Value</th>
+                  <th>Scenario Value</th>
+                  <th>Dollar Change</th>
+                  <th>Percent Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportResults.map((result) => (
+                  <tr key={result.scenario_name}>
+                    <td>{result.scenario_name}</td>
+                    <td>{formatCurrency(result.starting_value)}</td>
+                    <td>{formatCurrency(result.scenario_value)}</td>
+                    <td>{formatCurrency(result.dollar_change)}</td>
+                    <td>{result.percent_change}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </article>
+
+          <article className="summary-card">
+            <h3>Assumptions</h3>
+            {reportResults.map((result) => (
+              <div key={`${result.scenario_name}-assumptions`}>
+                <strong>{result.scenario_name}</strong>
+                <ul>
+                  {result.assumptions.map((assumption) => (
+                    <li key={assumption}>{assumption}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </article>
+
+          <article className="summary-card">
+            <h3>Largest Losses</h3>
+            {allImpactedHoldings.length === 0 ? (
+              <p>No holding-level losses were produced by this scenario report.</p>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Scenario</th>
+                    <th>Ticker</th>
+                    <th>Starting Value</th>
+                    <th>Scenario Value</th>
+                    <th>Dollar Change</th>
+                    <th>Percent Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allImpactedHoldings.map((holding, index) => (
+                    <tr key={`${holding.scenario_name}-${holding.ticker}-${index}`}>
+                      <td>{holding.scenario_name}</td>
+                      <td>{holding.ticker}</td>
+                      <td>{formatCurrency(holding.starting_value)}</td>
+                      <td>{formatCurrency(holding.scenario_value)}</td>
+                      <td>{formatCurrency(holding.dollar_change)}</td>
+                      <td>{holding.percent_change}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </article>
+        </>
+      )}
+
+      {reportError && <p className="error-message">{reportError}</p>}
     </section>
   );
 }
@@ -882,7 +1118,7 @@ function Dashboard({ analysis, hasAnalysis }) {
       <TargetGapTable analysis={dashboardAnalysis} />
       <OptimizerPanel analysis={dashboardAnalysis} />
       <OptimizerExplanationPanel analysis={dashboardAnalysis} />
-      <ScenarioReportPlaceholder />
+      <ScenarioReportPanel analysis={dashboardAnalysis} />
       <FutureAiSummaryPanel analysis={dashboardAnalysis} />
     </>
   );
