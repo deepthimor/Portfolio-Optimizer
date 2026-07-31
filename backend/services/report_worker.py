@@ -8,6 +8,27 @@ from backend.services.scenario_report import build_scenario_report
 logger = logging.getLogger(__name__)
 
 
+def build_user_friendly_error(error: Exception) -> str:
+    raw_error = str(error)
+
+    if "unknown scenario name" in raw_error:
+        return (
+            "Report failed because the request included an unsupported scenario. "
+            f"Details: {raw_error}"
+        )
+
+    if "portfolio value must be greater than zero" in raw_error:
+        return (
+            "Report failed because the portfolio value must be greater than zero. "
+            f"Details: {raw_error}"
+        )
+
+    return (
+        "Report failed during deterministic scenario processing. "
+        f"Details: {raw_error}"
+    )
+
+
 def get_next_pending_report_job(db) -> ReportJob | None:
     return (
         db.query(ReportJob)
@@ -56,7 +77,7 @@ def mark_job_failed(db, job: ReportJob, error: Exception, duration_seconds: floa
     previous_status = job.status
     job.status = "failed"
     job.result_json = None
-    job.error_message = str(error)
+    job.error_message = build_user_friendly_error(error)
 
     db.commit()
     db.refresh(job)

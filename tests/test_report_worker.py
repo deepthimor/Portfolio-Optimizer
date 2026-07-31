@@ -56,6 +56,7 @@ def test_worker_marks_failed_job_and_stores_error_message(db_session):
     assert processed_job.id == job.id
     assert processed_job.status == "failed"
     assert processed_job.result_json is None
+    assert "unsupported scenario" in processed_job.error_message
     assert "unknown scenario name" in processed_job.error_message
 
 

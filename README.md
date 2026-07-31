@@ -130,6 +130,70 @@ It currently supports:
 - Reason-coded recommendation output
 - Educational optimizer explanations
 
+## Background Jobs and Scenario Reports
+
+The project now includes a deterministic scenario report workflow backed by persistent report jobs.
+
+Users can generate a scenario report from the frontend. The frontend creates a report job through the backend, receives a `job_id`, and polls the report status endpoint until the job is complete or failed.
+
+### Report Job States
+
+Supported report job states:
+
+- `pending`
+- `running`
+- `completed`
+- `failed`
+
+The frontend displays these as:
+
+- `pending`
+- `processing`
+- `complete`
+- `failed`
+
+### Scenario Report Output
+
+Scenario reports include:
+
+- assumptions
+- portfolio impact
+- largest losses
+- educational explanation
+- disclaimer
+
+The report is educational only and does not predict future performance or provide financial advice.
+
+### Worker Command
+
+Run the local report worker with:
+
+```bash
+PYTHONPATH=. python scripts/run_worker.py
+```
+
+### Architecture Diagram
+
+```mermaid
+flowchart LR
+    Frontend[React Frontend] --> ReportsAPI[FastAPI Reports API]
+    ReportsAPI --> Jobs[(PostgreSQL report_jobs)]
+    Jobs --> Worker[Report Worker]
+    Worker --> ScenarioEngine[Scenario Report Engine]
+    ScenarioEngine --> Jobs
+    Frontend --> ReportsAPI
+```
+
+### Screenshot
+
+Scenario report UI screenshot:
+
+```text
+docs/screenshots/scenario-report-status.png
+```
+
+The screenshot should show the report status UI, scenario result sections, and educational disclaimer.
+
 ### Recommendation Output
 
 Example recommendation:
