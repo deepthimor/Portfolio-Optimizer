@@ -97,3 +97,35 @@ GET /api/reports/{id}
 This architecture keeps financial calculations deterministic, testable, and explainable.
 
 The job lifecycle also makes the project easier to discuss in system design interviews because the report is no longer just a function call. It has persistence, status transitions, failure handling, polling, and restart behavior.
+
+## RAG Architecture Draft
+
+Future Week 7 work will add a RAG-style finance notes feature.
+
+```mermaid
+flowchart LR
+    Frontend[React Frontend] --> FastAPI[FastAPI Backend]
+
+    FastAPI --> Analyze[Portfolio Analysis]
+    FastAPI --> Reports[Scenario Reports]
+    FastAPI --> Retrieval[RAG Retrieval]
+
+    Analyze --> Postgres[(PostgreSQL)]
+    Reports --> Queue[Database-Backed Queue]
+    Queue --> Worker[Report Worker]
+    Worker --> Postgres
+
+    Retrieval --> Chunks[Finance Note Chunks]
+    Chunks --> Retriever[Retriever]
+    Retriever --> AnswerBuilder[Answer Builder]
+    AnswerBuilder --> Citations[Citations]
+    AnswerBuilder --> AISummary[AI Summary Service]
+
+    AISummary --> Frontend
+    Reports --> Frontend
+
+    FastAPI --> Render[Render Deployment]
+    Frontend --> Vercel[Vercel Deployment]
+```
+
+The RAG feature will use project-controlled educational finance notes as source material. Answers should cite retrieved chunks and avoid unsupported investment advice.
