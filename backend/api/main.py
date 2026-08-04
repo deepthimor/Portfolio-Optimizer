@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes.portfolio import router as portfolio_router
 from backend.api.routes.reports import router as reports_router
+from backend.api.routes.rag import router as rag_router
 
 
 def get_cors_origins() -> list[str]:
@@ -45,7 +46,7 @@ app.add_middleware(
 
 app.include_router(portfolio_router)
 app.include_router(reports_router)
-
+app.include_router(rag_router)
 
 @app.get("/")
 def root():

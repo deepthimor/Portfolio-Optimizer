@@ -215,3 +215,22 @@ class ReportJobStatusResponse(BaseModel):
     error_message: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+
+class RagAskRequest(BaseModel):
+    question: str = Field(..., min_length=1)
+
+
+class RagCitedSection(BaseModel):
+    chunk_id: str
+    title: str
+    source_filename: str
+    text: str
+    score: float
+
+
+class RagAskResponse(BaseModel):
+    answer: str
+    cited_sections: List[RagCitedSection]
+    confidence: float
+    unsupported: bool
+    prompt_rules: List[str]
