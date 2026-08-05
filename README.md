@@ -312,6 +312,48 @@ FastAPI backend
 PostgreSQL database
 ```
 
+## Architecture Overview
+
+The project is organized around thin API routes and focused service modules.
+
+```mermaid
+flowchart LR
+    Frontend[React Frontend] --> PortfolioRoutes[Portfolio Routes]
+    Frontend --> ReportRoutes[Report Routes]
+    Frontend --> RagRoutes[RAG Routes]
+
+    PortfolioRoutes --> Analytics[Analytics Services]
+    Analytics --> Risk[Risk Score]
+    Analytics --> Optimizer[Optimizer]
+    Optimizer --> OptimizerExplanation[Optimizer Explanation]
+
+    ReportRoutes --> ReportJobs[Report Job Service]
+    ReportJobs --> Postgres[(PostgreSQL)]
+    Postgres --> Worker[Report Worker]
+    Worker --> ScenarioReports[Scenario Report Engine]
+    ScenarioReports --> Postgres
+
+    RagRoutes --> RagRetrieval[RAG Retrieval Service]
+    RagRetrieval --> FinanceNotes[Finance Notes Chunks]
+    RagRetrieval --> RagAnswer[RAG Answer with Citations]
+
+    Analytics --> AiSummary[AI Summary Service]
+    RagAnswer --> Frontend
+    AiSummary --> Frontend
+    ScenarioReports --> Frontend
+```
+
+### Backend Organization
+
+- Analytics: portfolio calculations and risk scoring
+- Optimizer: deterministic recommendation logic
+- Reports: scenario reports and background job lifecycle
+- AI: AI-style explanations based only on deterministic outputs
+- RAG: finance-note retrieval, citations, and unsupported-question handling
+- Database: SQLAlchemy models and database session setup
+
+Routes stay thin and call service modules instead of holding business logic directly.
+
 ## Project Structure
 
 ```text

@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import {
   analyzePortfolio,
+  askRagQuestion,
   createPortfolio,
   createReportJob,
   deleteHolding,
@@ -1103,6 +1104,143 @@ function ScenarioReportPanel({ analysis }) {
   );
 }
 
+function RagAssistantPanel() {
+  const exampleQuestions = [
+    "What is diversification?",
+    "What is concentration risk?",
+    "Why can cash drag matter?",
+    "What is rebalancing?",
+  ];
+
+  const [ragQuestion, setRagQuestion] = useState("");
+  const [ragAnswer, setRagAnswer] = useState(null);
+  const [isAskingRag, setIsAskingRag] = useState(false);
+  const [ragError, setRagError] = useState("");
+
+  async function handleAskRag(event) {
+    event.preventDefault();
+
+    if (!ragQuestion.trim()) {
+      setRagError("Please enter a question.");
+      return;
+    }
+
+    setIsAskingRag(true);
+    setRagError("");
+
+    try {
+      const result = await askRagQuestion(ragQuestion.trim());
+      setRagAnswer(result);
+    } catch (error) {
+      setRagError("Could not answer the RAG question. Please try again.");
+    } finally {
+      setIsAskingRag(false);
+    }
+  }
+
+  function handleExampleQuestion(question) {
+    setRagQuestion(question);
+    setRagAnswer(null);
+    setRagError("");
+  }
+
+  return (
+    <section className="dashboard-section">
+      <h2>Finance Notes Assistant</h2>
+
+      <p className="disclaimer">
+        Educational information only; answers come from retrieved finance-note
+        sections and are not investment advice.
+      </p>
+
+      <form onSubmit={handleAskRag}>
+        <label>
+          Ask a finance concept question
+          <input
+            value={ragQuestion}
+            onChange={(event) => setRagQuestion(event.target.value)}
+            placeholder="Example: What is diversification?"
+          />
+        </label>
+
+        <button type="submit" disabled={isAskingRag}>
+          {isAskingRag ? "Searching Notes..." : "Ask Finance Notes"}
+        </button>
+      </form>
+
+      <div className="summary-grid">
+        {exampleQuestions.map((question) => (
+          <button
+            type="button"
+            key={question}
+            onClick={() => handleExampleQuestion(question)}
+          >
+            {question}
+          </button>
+        ))}
+      </div>
+
+      {ragError && <p className="error-message">{ragError}</p>}
+
+      {ragAnswer && (
+        <>
+          <article className="summary-card">
+            <h3>Answer</h3>
+
+            {ragAnswer.unsupported && (
+              <p className="fallback-message">
+                Unsupported question. The assistant could not answer safely from
+                the retrieved finance-note context.
+              </p>
+            )}
+
+            <p>{ragAnswer.answer}</p>
+
+            <p>
+              <strong>Confidence:</strong> {ragAnswer.confidence}
+            </p>
+
+            <p>
+              <strong>Unsupported:</strong>{" "}
+              {ragAnswer.unsupported ? "yes" : "no"}
+            </p>
+          </article>
+
+          <article className="summary-card">
+            <h3>Cited Sections</h3>
+
+            {ragAnswer.cited_sections.length === 0 ? (
+              <p>No cited sections were retrieved.</p>
+            ) : (
+              <div className="risk-explanation-list">
+                {ragAnswer.cited_sections.map((section) => (
+                  <article key={section.chunk_id} className="summary-card">
+                    <strong>
+                      {section.chunk_id} — {section.title}
+                    </strong>
+                    <p>{section.source_filename}</p>
+                    <p>Score: {section.score}</p>
+                    <p>{section.text.slice(0, 500)}...</p>
+                  </article>
+                ))}
+              </div>
+            )}
+          </article>
+
+          <article className="summary-card">
+            <h3>Prompt Rules</h3>
+            <ul>
+              {ragAnswer.prompt_rules.map((rule) => (
+                <li key={rule}>{rule}</li>
+              ))}
+            </ul>
+          </article>
+        </>
+      )}
+    </section>
+  );
+}
+
 function Dashboard({ analysis, hasAnalysis }) {
   const dashboardAnalysis = analysis || sampleAnalysis;
   const isSample = !hasAnalysis;
@@ -1119,6 +1257,7 @@ function Dashboard({ analysis, hasAnalysis }) {
       <OptimizerPanel analysis={dashboardAnalysis} />
       <OptimizerExplanationPanel analysis={dashboardAnalysis} />
       <ScenarioReportPanel analysis={dashboardAnalysis} />
+      <RagAssistantPanel />
       <FutureAiSummaryPanel analysis={dashboardAnalysis} />
     </>
   );

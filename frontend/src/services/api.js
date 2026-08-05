@@ -62,3 +62,8 @@ export async function getReportJob(jobId) {
   const response = await api.get(`/api/reports/${jobId}`);
   return response.data;
 }
+
+export async function askRagQuestion(question) {
+  const response = await api.post("/api/rag/ask", { question });
+  return response.data;
+}
