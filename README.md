@@ -281,27 +281,6 @@ Where:
 * PostgreSQL
 * Redis
 
-## Reliability and Security
-
-The backend includes request ID logging for API requests and report jobs.
-
-Each API request receives an `X-Request-ID` response header. If a client sends an `X-Request-ID`, the backend reuses it. Otherwise, the backend creates one.
-
-Security and reliability rules are documented in:
-
-```text
-docs/reliability-security-checklist.md
-```
-
-Current safety rules:
-
-- Do not commit real `.env` files.
-- Do not commit production database URLs, API keys, tokens, or passwords.
-- Keep `.env.example` limited to placeholders.
-- Do not log raw portfolio data unless needed for local debugging.
-- Do not log API keys, database URLs, passwords, cookies, authorization headers, or tokens.
-- Use safe user-facing errors for failed jobs and failed API calls.
-
 ## Architecture
 
 ```text
@@ -648,6 +627,27 @@ PYTHONPATH=. python scripts/create_tables.py
 ```
 
 This project currently uses SQLAlchemy `create_all` for MVP table creation.
+
+## Reliability and Security
+
+The backend includes request ID logging for API requests and report jobs.
+
+Each API request receives an `X-Request-ID` response header. If a client sends an `X-Request-ID`, the backend reuses it. Otherwise, the backend creates one.
+
+Security and reliability rules are documented in:
+
+```text
+docs/reliability-security-checklist.md
+```
+
+Current safety rules:
+
+- Do not commit real `.env` files.
+- Do not commit production database URLs, API keys, tokens, or passwords.
+- Keep `.env.example` limited to placeholders.
+- Do not log raw portfolio data unless needed for local debugging.
+- Do not log API keys, database URLs, passwords, cookies, authorization headers, or tokens.
+- Use safe user-facing errors for failed jobs and failed API calls.
 
 ### Deployment Log
 
