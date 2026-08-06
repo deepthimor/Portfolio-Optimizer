@@ -4,6 +4,7 @@ import time
 from backend.models import ReportJob
 from backend.schemas.portfolio import ReportRequest
 from backend.services.scenario_report import build_scenario_report
+from backend.services.logging_utils import get_request_id
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,8 @@ def mark_job_running(db, job: ReportJob) -> ReportJob:
     db.refresh(job)
 
     logger.info(
-        "job_id=%s status_transition=%s->running",
+        "request_id=%s job_id=%s status_transition=%s->running",
+        get_request_id(),
         job.id,
         previous_status,
     )
@@ -64,7 +66,8 @@ def mark_job_completed(db, job: ReportJob, result: dict, duration_seconds: float
     db.refresh(job)
 
     logger.info(
-        "job_id=%s status_transition=%s->completed duration_seconds=%.4f",
+        "request_id=%s job_id=%s status_transition=%s->completed duration_seconds=%.4f",
+        get_request_id(),
         job.id,
         previous_status,
         duration_seconds,
@@ -83,11 +86,12 @@ def mark_job_failed(db, job: ReportJob, error: Exception, duration_seconds: floa
     db.refresh(job)
 
     logger.exception(
-        "job_id=%s status_transition=%s->failed duration_seconds=%.4f error=%s",
+        "request_id=%s job_id=%s status_transition=%s->failed duration_seconds=%.4f error_type=%s",
+        get_request_id(),
         job.id,
         previous_status,
         duration_seconds,
-        str(error),
+        type(error).__name__,
     )
 
     return job
@@ -106,7 +110,12 @@ def build_report_request_from_job(job: ReportJob) -> ReportRequest:
 def process_report_job(db, job: ReportJob) -> ReportJob:
     started_at = time.perf_counter()
 
-    logger.info("job_id=%s worker_started status=%s", job.id, job.status)
+    logger.info(
+        "request_id=%s job_id=%s worker_started status=%s",
+        get_request_id(),
+        job.id,
+        job.status,
+    )
 
     mark_job_running(db, job)
 
@@ -128,7 +137,10 @@ def process_next_report_job(db) -> ReportJob | None:
     job = get_next_pending_report_job(db)
 
     if not job:
-        logger.info("worker_checked_queue pending_jobs=0")
+        logger.info(
+            "request_id=%s worker_checked_queue pending_jobs=0",
+            get_request_id(),
+        )
         return None
 
     return process_report_job(db, job)
@@ -145,6 +157,10 @@ def process_pending_report_jobs(db, limit: int = 10) -> int:
 
         processed_count += 1
 
-    logger.info("worker_finished processed_count=%s", processed_count)
+    logger.info(
+        "request_id=%s worker_finished processed_count=%s",
+        get_request_id(),
+        processed_count,
+    )
 
     return processed_count

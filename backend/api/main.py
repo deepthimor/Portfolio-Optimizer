@@ -7,6 +7,8 @@ from backend.api.routes.portfolio import router as portfolio_router
 from backend.api.routes.reports import router as reports_router
 from backend.api.routes.rag import router as rag_router
 
+from backend.services.logging_utils import configure_logging, request_id_middleware
+
 
 def get_cors_origins() -> list[str]:
     raw_origins = os.getenv("CORS_ORIGINS", "")
@@ -29,12 +31,15 @@ def get_cors_origins() -> list[str]:
 
     return default_local_origins + configured_origins
 
+configure_logging(os.getenv("LOG_LEVEL", "INFO"))
 
 app = FastAPI(
     title="Portfolio Optimizer API",
     description="Backend API for portfolio analysis and optimization.",
     version="0.1.0",
 )
+
+app.middleware("http")(request_id_middleware)
 
 app.add_middleware(
     CORSMiddleware,

@@ -281,6 +281,27 @@ Where:
 * PostgreSQL
 * Redis
 
+## Reliability and Security
+
+The backend includes request ID logging for API requests and report jobs.
+
+Each API request receives an `X-Request-ID` response header. If a client sends an `X-Request-ID`, the backend reuses it. Otherwise, the backend creates one.
+
+Security and reliability rules are documented in:
+
+```text
+docs/reliability-security-checklist.md
+```
+
+Current safety rules:
+
+- Do not commit real `.env` files.
+- Do not commit production database URLs, API keys, tokens, or passwords.
+- Keep `.env.example` limited to placeholders.
+- Do not log raw portfolio data unless needed for local debugging.
+- Do not log API keys, database URLs, passwords, cookies, authorization headers, or tokens.
+- Use safe user-facing errors for failed jobs and failed API calls.
+
 ## Architecture
 
 ```text
@@ -421,7 +442,7 @@ Update `.env` with your local database URL if needed.
 Example:
 
 ```env
-DATABASE_URL=postgresql://portfolio_user:portfolio_password@localhost:5432/portfolio_db
+DATABASE_URL=postgresql://portfolio_user:change_me_for_local_development@localhost:5433/portfolio_db
 ```
 
 ### Start Infrastructure Services
