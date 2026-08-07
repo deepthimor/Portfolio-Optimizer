@@ -73,14 +73,24 @@ def test_delete_portfolio_with_holdings(client, saved_portfolio_payload):
     after_delete = client.get(f"/api/portfolio/{portfolio_id}")
 
     assert after_delete.status_code == 404
-    assert after_delete.json() == {"detail": "portfolio not found"}
+    data = after_delete.json()
+
+    assert data["detail"] == "portfolio not found"
+    assert data["message"] == "portfolio not found"
+    assert data["error"] == "http_error"
+    assert "request_id" in data
 
 
 def test_invalid_portfolio_id_returns_clean_404(client):
     response = client.get("/api/portfolio/999999")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "portfolio not found"}
+    data = response.json()
+
+    assert data["detail"] == "portfolio not found"
+    assert data["message"] == "portfolio not found"
+    assert data["error"] == "http_error"
+    assert "request_id" in data
 
 
 def test_add_update_and_delete_holding(client, saved_portfolio_payload):
@@ -139,12 +149,22 @@ def test_invalid_holding_id_returns_clean_404(client):
     )
 
     assert patch_response.status_code == 404
-    assert patch_response.json() == {"detail": "holding not found"}
+    data = patch_response.json()
+
+    assert data["detail"] == "holding not found"
+    assert data["message"] == "holding not found"
+    assert data["error"] == "http_error"
+    assert "request_id" in data
 
     delete_response = client.delete("/api/portfolio/holdings/999999")
 
     assert delete_response.status_code == 404
-    assert delete_response.json() == {"detail": "holding not found"}
+    delete_data = delete_response.json()
+
+    assert delete_data["detail"] == "holding not found"
+    assert delete_data["message"] == "holding not found"
+    assert delete_data["error"] == "http_error"
+    assert "request_id" in delete_data
 
 def test_create_and_list_portfolio_snapshots(client, saved_portfolio_payload):
     create_response = client.post(
@@ -182,4 +202,9 @@ def test_invalid_portfolio_id_returns_clean_404_for_snapshots(client):
     response = client.get("/api/portfolio/999999/snapshots")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "portfolio not found"}
+    data = response.json()
+
+    assert data["detail"] == "portfolio not found"
+    assert data["message"] == "portfolio not found"
+    assert data["error"] == "http_error"
+    assert "request_id" in data

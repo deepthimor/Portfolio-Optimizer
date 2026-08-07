@@ -1,3 +1,9 @@
+import logging
+
+from backend.services.logging_utils import get_request_id
+
+logger = logging.getLogger(__name__)
+
 ALLOWED_AI_SUMMARY_FIELDS = {
     "total_portfolio_value",
     "cash_percentage",
@@ -143,5 +149,9 @@ def build_safe_ai_summary(analysis: dict, force_failure: bool = False) -> dict:
             "disclaimer": "Educational information only; not financial advice.",
         }
     except Exception as error:
-        print(f"AI summary failed: {error}")
+        logger.exception(
+            "request_id=%s ai_summary_failed error_type=%s",
+            get_request_id(),
+            type(error).__name__,
+        )
         return build_fallback_summary(ai_summary_input)

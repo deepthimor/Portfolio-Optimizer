@@ -312,6 +312,16 @@ FastAPI backend
 PostgreSQL database
 ```
 
+## Project Review Materials
+
+Helpful review docs:
+
+- `docs/case-study.md`
+- `docs/ai-code-review.md`
+- `docs/reliability-security-checklist.md`
+- `docs/rag-ui-smoke-test.md`
+- `backend/services/README.md`
+
 ## Architecture Overview
 
 The project is organized around thin API routes and focused service modules.

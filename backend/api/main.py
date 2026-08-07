@@ -1,13 +1,19 @@
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes.portfolio import router as portfolio_router
-from backend.api.routes.reports import router as reports_router
 from backend.api.routes.rag import router as rag_router
-
+from backend.api.routes.reports import router as reports_router
+from backend.services.error_handlers import (
+    http_exception_handler,
+    unhandled_exception_handler,
+    validation_exception_handler,
+)
 from backend.services.logging_utils import configure_logging, request_id_middleware
+from backend.services.rate_limit import rate_limit_middleware
 
 
 def get_cors_origins() -> list[str]:
@@ -39,7 +45,12 @@ app = FastAPI(
     version="0.1.0",
 )
 
+app.middleware("http")(rate_limit_middleware)
 app.middleware("http")(request_id_middleware)
+
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 app.add_middleware(
     CORSMiddleware,
