@@ -659,14 +659,6 @@ Current safety rules:
 - Do not log API keys, database URLs, passwords, cookies, authorization headers, or tokens.
 - Use safe user-facing errors for failed jobs and failed API calls.
 
-### Deployment Log
-
-Deployment errors, fixes, environment variable decisions, and production verification should be documented in:
-
-```text
-docs/deployment-log.md
-```
-
 ### Analyze Portfolio
 
 ```http

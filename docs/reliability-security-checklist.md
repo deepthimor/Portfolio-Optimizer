@@ -86,14 +86,21 @@ Rules:
 
 Current status:
 
-- A `RATE_LIMIT_PER_MINUTE` environment variable exists for future use.
-- Full rate limiting is not implemented yet.
+- Basic in-memory rate limiting is implemented.
+- The rate limit uses the `RATE_LIMIT_PER_MINUTE` environment variable.
+- The current implementation limits repeated requests by client host and path.
+- When the limit is exceeded, the API returns a safe `429 Too Many Requests` response.
+- The response includes a user-friendly message, `request_id`, `X-Request-ID`, and `Retry-After`.
+
+Rules:
+
+- Keep rate-limit responses safe and user-readable.
+- Do not log raw request bodies when rate limits are exceeded.
+- Keep rate limiting stricter for AI/RAG endpoints if the app expands.
 
 Recommended future improvement:
 
-- Add middleware or a lightweight dependency to limit repeated requests.
-- Apply stricter limits to AI/RAG endpoints than basic health checks.
-- Return a safe `429 Too Many Requests` error when the limit is exceeded.
+- Replace in-memory rate limiting with Redis-backed rate limiting for multi-instance production deployments.
 
 ## Failed AI Calls
 
